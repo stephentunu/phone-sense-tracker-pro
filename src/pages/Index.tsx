@@ -1,14 +1,240 @@
-// Update this page (the content is just a fallback if you fail to update the page)
 
-const Index = () => {
+import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { AppLayout } from '@/components/layout/AppLayout';
+import { api, ActivityLog, CallRecord, LocationData, TrackedNumber } from '@/lib/api';
+import { Skeleton } from '@/components/ui/skeleton';
+import { TrackedNumberCard } from '@/components/dashboard/TrackedNumberCard';
+import { StatsCard } from '@/components/dashboard/StatsCard';
+import { ActivityTimeline } from '@/components/dashboard/ActivityTimeline';
+import { CallHistoryList } from '@/components/dashboard/CallHistoryList';
+import { LocationMap } from '@/components/dashboard/LocationMap';
+import { AddPhoneDialog } from '@/components/dashboard/AddPhoneDialog';
+import { PhoneCall, MessageSquare, Map, Clock } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
+import { Button } from '@/components/ui/button';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+
+const Dashboard = () => {
+  const { toast } = useToast();
+  const isMobile = useIsMobile();
+  const [selectedPhoneNumber, setSelectedPhoneNumber] = useState<string | null>(null);
+  
+  // Fetch tracked numbers
+  const { 
+    data: trackedNumbers, 
+    isLoading: isLoadingTrackedNumbers,
+    refetch: refetchTrackedNumbers
+  } = useQuery({
+    queryKey: ['trackedNumbers'],
+    queryFn: api.getTrackedNumbers,
+  });
+  
+  // Fetch activities
+  const { 
+    data: activities,
+    isLoading: isLoadingActivities,
+  } = useQuery({
+    queryKey: ['activities', selectedPhoneNumber],
+    queryFn: () => selectedPhoneNumber 
+      ? api.getActivitiesByNumber(selectedPhoneNumber)
+      : api.getActivities(),
+  });
+  
+  // Fetch calls
+  const { 
+    data: calls,
+    isLoading: isLoadingCalls,
+  } = useQuery({
+    queryKey: ['calls', selectedPhoneNumber],
+    queryFn: () => selectedPhoneNumber 
+      ? api.getCallsByNumber(selectedPhoneNumber)
+      : api.getCalls(),
+  });
+  
+  // Fetch locations
+  const { 
+    data: locations,
+    isLoading: isLoadingLocations,
+  } = useQuery({
+    queryKey: ['locations', selectedPhoneNumber],
+    queryFn: () => selectedPhoneNumber 
+      ? api.getLocationsByNumber(selectedPhoneNumber)
+      : api.getLocations(),
+  });
+  
+  // Set the first tracked number as selected by default
+  useEffect(() => {
+    if (trackedNumbers?.length && !selectedPhoneNumber) {
+      setSelectedPhoneNumber(trackedNumbers[0].phoneNumber);
+    }
+  }, [trackedNumbers, selectedPhoneNumber]);
+  
+  const handleTrackedNumberClick = (phoneNumber: string) => {
+    setSelectedPhoneNumber(phoneNumber);
+    toast({
+      title: "Phone Selected",
+      description: `Showing data for ${phoneNumber}`,
+    });
+  };
+  
+  const handleAddPhoneSuccess = () => {
+    refetchTrackedNumbers();
+    toast({
+      title: "Success",
+      description: "Phone number added and ready for tracking",
+    });
+  };
+  
+  const calculateStats = () => {
+    if (!calls || !activities) return {
+      totalCalls: 0,
+      totalTexts: 0,
+      totalLocations: 0,
+      totalDuration: 0
+    };
+    
+    const totalCalls = calls.length;
+    const totalDuration = calls.reduce((acc, call) => acc + call.duration, 0);
+    const totalTexts = activities.filter(a => a.activityType === 'text').length;
+    const totalLocations = locations?.length || 0;
+    
+    return { totalCalls, totalTexts, totalLocations, totalDuration };
+  };
+  
+  const stats = calculateStats();
+  
+  const formatDuration = (seconds: number): string => {
+    const hours = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    return hours > 0 ? `${hours}h ${mins}m` : `${mins} min`;
+  };
+  
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-gray-600">Start building your amazing project here!</p>
+    <AppLayout>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">Phone Tracking Dashboard</h1>
+        <AddPhoneDialog onSuccess={handleAddPhoneSuccess} />
       </div>
-    </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+        {/* Tracked Numbers */}
+        <div className="md:col-span-3 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold">Tracked Numbers</h2>
+          </div>
+          
+          {isLoadingTrackedNumbers ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="space-y-2">
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-6 w-2/3" />
+                  <Skeleton className="h-4 w-1/2" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {trackedNumbers?.length ? (
+                trackedNumbers.map((number) => (
+                  <TrackedNumberCard 
+                    key={number.phoneNumber} 
+                    trackedNumber={number}
+                    onClick={handleTrackedNumberClick}
+                  />
+                ))
+              ) : (
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center py-6">
+                    <p className="text-muted-foreground mb-2">No phones tracked yet</p>
+                    <Button size="sm">Add Phone Number</Button>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
+        </div>
+        
+        {/* Main Content */}
+        <div className="md:col-span-9 space-y-6">
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatsCard
+              title="Total Calls"
+              value={stats.totalCalls}
+              icon={<PhoneCall className="h-4 w-4" />}
+              trend={{ value: 12, positive: true }}
+            />
+            <StatsCard
+              title="Messages"
+              value={stats.totalTexts}
+              icon={<MessageSquare className="h-4 w-4" />}
+              trend={{ value: 8, positive: true }}
+            />
+            <StatsCard
+              title="Locations"
+              value={stats.totalLocations}
+              icon={<Map className="h-4 w-4" />}
+              trend={{ value: 5, positive: true }}
+            />
+            <StatsCard
+              title="Call Duration"
+              value={formatDuration(stats.totalDuration)}
+              icon={<Clock className="h-4 w-4" />}
+            />
+          </div>
+          
+          {/* Map */}
+          <div>
+            {isLoadingLocations ? (
+              <Skeleton className="w-full h-[300px] rounded-lg" />
+            ) : (
+              <LocationMap locations={locations || []} height="300px" />
+            )}
+          </div>
+          
+          {/* Call History and Activity Timeline */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Call History */}
+            <div>
+              {isLoadingCalls ? (
+                <div className="space-y-3">
+                  <Skeleton className="h-7 w-1/3" />
+                  {[1, 2, 3].map((i) => (
+                    <Skeleton key={i} className="h-16 w-full" />
+                  ))}
+                </div>
+              ) : (
+                <CallHistoryList calls={calls || []} />
+              )}
+            </div>
+            
+            {/* Activity Timeline */}
+            <div>
+              {isLoadingActivities ? (
+                <div className="space-y-3">
+                  <Skeleton className="h-7 w-1/3" />
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="flex gap-2">
+                      <Skeleton className="h-6 w-6 rounded-full" />
+                      <div className="space-y-1 flex-1">
+                        <Skeleton className="h-4 w-2/3" />
+                        <Skeleton className="h-3 w-full" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <ActivityTimeline activities={activities || []} />
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </AppLayout>
   );
 };
 
-export default Index;
+export default Dashboard;
