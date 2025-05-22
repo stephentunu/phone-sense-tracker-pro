@@ -10,6 +10,7 @@ interface CurrentLocationProps {
   latitude: number;
   longitude: number;
   accuracy: number;
+  locationName?: string | null;
 }
 
 interface LocationMapProps {
@@ -114,6 +115,9 @@ export const LocationMap = ({
                     
                     <div className="opacity-0 group-hover:opacity-100 absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-white rounded shadow-md text-xs whitespace-nowrap transition-opacity z-20">
                       <p>Your current location</p>
+                      {currentLocation.locationName && (
+                        <p className="text-xs font-medium">{currentLocation.locationName}</p>
+                      )}
                       <p className="text-xs text-muted-foreground">
                         Lat: {currentLocation.latitude.toFixed(6)}, Long: {currentLocation.longitude.toFixed(6)}
                       </p>

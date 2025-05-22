@@ -95,11 +95,12 @@ const LocationTracking = () => {
     }
     
     try {
-      await api.addLocation(
+      const newLocation = await api.addLocation(
         selectedPhoneNumber,
         geolocation.latitude,
         geolocation.longitude,
-        geolocation.accuracy || 10
+        geolocation.accuracy || 10,
+        geolocation.locationName || "Unknown Location"
       );
       
       refetchLocations();
@@ -217,6 +218,11 @@ const LocationTracking = () => {
             <MapPin className="h-4 w-4" />
             {geolocation.isLoading ? 'Getting Location...' : 'Add Current Location'}
           </Button>
+          {geolocation.locationName && !geolocation.isLoading && (
+            <p className="text-sm text-center mt-1 text-muted-foreground">
+              Current location: {geolocation.locationName}
+            </p>
+          )}
         </div>
         
         {/* Main Content */}
@@ -232,7 +238,8 @@ const LocationTracking = () => {
                 currentLocation={geolocation.latitude && geolocation.longitude ? {
                   latitude: geolocation.latitude,
                   longitude: geolocation.longitude,
-                  accuracy: geolocation.accuracy || 10
+                  accuracy: geolocation.accuracy || 10,
+                  locationName: geolocation.locationName
                 } : undefined}
               />
             )}

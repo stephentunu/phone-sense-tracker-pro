@@ -8,6 +8,7 @@ interface GeolocationState {
   error: string | null;
   isLoading: boolean;
   timestamp: number | null;
+  locationName: string | null;
 }
 
 export function useGeolocation(options?: PositionOptions) {
@@ -17,7 +18,8 @@ export function useGeolocation(options?: PositionOptions) {
     accuracy: null,
     error: null,
     isLoading: true,
-    timestamp: null
+    timestamp: null,
+    locationName: null
   });
 
   useEffect(() => {
@@ -30,15 +32,44 @@ export function useGeolocation(options?: PositionOptions) {
       return;
     }
 
-    const successHandler = (position: GeolocationPosition) => {
+    const successHandler = async (position: GeolocationPosition) => {
       console.log('Geolocation success:', position.coords);
+      
+      // Get location name using reverse geocoding
+      let locationName = null;
+      try {
+        const response = await fetch(
+          `https://api.opencagedata.com/geocode/v1/json?q=${position.coords.latitude}+${position.coords.longitude}&key=6d0e711d72d74daeb2b0bfd2a5cdfdba`
+        );
+        const data = await response.json();
+        if (data.results && data.results.length > 0) {
+          const result = data.results[0];
+          const components = result.components;
+          
+          // Build location name from components
+          const city = components.city || components.town || components.village || components.county;
+          const state = components.state;
+          const country = components.country;
+          
+          const parts = [];
+          if (city) parts.push(city);
+          if (state && (!city || city !== state)) parts.push(state);
+          if (country) parts.push(country);
+          
+          locationName = parts.join(', ');
+        }
+      } catch (error) {
+        console.error('Error fetching location name:', error);
+      }
+
       setState({
         latitude: position.coords.latitude,
         longitude: position.coords.longitude,
         accuracy: position.coords.accuracy,
         error: null,
         isLoading: false,
-        timestamp: position.timestamp
+        timestamp: position.timestamp,
+        locationName: locationName
       });
     };
 

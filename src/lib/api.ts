@@ -1,4 +1,3 @@
-
 import { format, subDays, subHours } from 'date-fns';
 
 // Types
@@ -265,7 +264,7 @@ export const api = {
   }),
   
   // Add a new location for a phone number
-  addLocation: (phoneNumber: string, latitude: number, longitude: number, accuracy: number) => 
+  addLocation: (phoneNumber: string, latitude: number, longitude: number, accuracy: number, locationName?: string) => 
     new Promise<LocationData>((resolve) => {
       // Find contact info
       const contact = contacts.find(c => c.phoneNumber === phoneNumber);
@@ -278,7 +277,7 @@ export const api = {
         longitude,
         accuracy,
         timestamp: format(new Date(), "yyyy-MM-dd'T'HH:mm:ss"),
-        address: "Current Location", // In a real app, would use reverse geocoding
+        address: locationName || "Current Location", // Use the provided location name
       };
       
       // Update tracked number's last seen
