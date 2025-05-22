@@ -1,10 +1,10 @@
 
-import { TrackedNumber } from '@/lib/api';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { format, formatDistanceToNow } from 'date-fns';
-import { PhoneCall, MessageSquare, Clock } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { PhoneCall, MessageSquare, MapPin } from "lucide-react";
+import { TrackedNumber } from "@/lib/api";
+import { detectCountry } from "@/utils/phoneUtils";
+import { formatDistanceToNow } from "date-fns";
 
 interface TrackedNumberCardProps {
   trackedNumber: TrackedNumber;
@@ -14,45 +14,65 @@ interface TrackedNumberCardProps {
 export const TrackedNumberCard = ({ trackedNumber, onClick }: TrackedNumberCardProps) => {
   const { phoneNumber, label, isActive, lastSeen, callCount, textCount } = trackedNumber;
   
+  const country = detectCountry(phoneNumber);
+  
+  const handleClick = () => {
+    if (onClick) onClick(phoneNumber);
+  };
+  
   return (
     <Card 
-      className={cn(
-        "overflow-hidden transition-all hover:shadow-md cursor-pointer",
-        isActive && "border-l-4 border-l-green-500"
-      )}
-      onClick={() => onClick?.(phoneNumber)}
+      className={`hover:bg-accent/50 cursor-pointer border-l-4 ${
+        isActive ? "border-l-green-500" : "border-l-gray-300"
+      }`}
+      onClick={handleClick}
     >
-      <CardHeader className="pb-2">
-        <div className="flex justify-between items-start">
-          <div>
-            <CardTitle className="text-lg">{label}</CardTitle>
-            <CardDescription className="font-mono">{phoneNumber}</CardDescription>
+      <CardContent className="py-3">
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <h3 className="font-medium truncate mr-2">{label}</h3>
+            {isActive ? (
+              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                Active
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="bg-gray-50 text-gray-500 border-gray-200">
+                Inactive
+              </Badge>
+            )}
           </div>
-          <Badge variant={isActive ? "default" : "outline"} className={isActive ? "bg-green-500 hover:bg-green-600" : ""}>
-            {isActive ? "Active" : "Inactive"}
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-1 text-sm text-muted-foreground">
-            <PhoneCall className="h-4 w-4" />
-            <span>{callCount}</span>
+          
+          <div className="text-sm text-muted-foreground truncate">
+            {phoneNumber}
           </div>
-          <div className="flex items-center gap-1 text-sm text-muted-foreground">
-            <MessageSquare className="h-4 w-4" />
-            <span>{textCount}</span>
+          
+          {country && (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <span>{country.flag}</span>
+              <span>{country.country}</span>
+            </div>
+          )}
+          
+          <div className="flex items-center justify-between pt-1 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1">
+              <PhoneCall className="h-3 w-3" />
+              <span>{callCount}</span>
+            </div>
+            
+            <div className="flex items-center gap-1">
+              <MessageSquare className="h-3 w-3" />
+              <span>{textCount}</span>
+            </div>
+            
+            {lastSeen && (
+              <div className="flex items-center gap-1">
+                <MapPin className="h-3 w-3" />
+                <span>{formatDistanceToNow(new Date(lastSeen), { addSuffix: true })}</span>
+              </div>
+            )}
           </div>
         </div>
       </CardContent>
-      {lastSeen && (
-        <CardFooter className="pt-2 pb-3 text-xs text-muted-foreground">
-          <div className="flex items-center">
-            <Clock className="h-3 w-3 mr-1" />
-            <span>Last seen: {formatDistanceToNow(new Date(lastSeen), { addSuffix: true })}</span>
-          </div>
-        </CardFooter>
-      )}
     </Card>
   );
 };

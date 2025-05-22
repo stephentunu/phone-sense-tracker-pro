@@ -15,6 +15,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { detectCountry } from '@/utils/phoneUtils';
 
 const Dashboard = () => {
   const { toast } = useToast();
@@ -57,6 +58,7 @@ const Dashboard = () => {
   const { 
     data: locations,
     isLoading: isLoadingLocations,
+    refetch: refetchLocations
   } = useQuery({
     queryKey: ['locations', selectedPhoneNumber],
     queryFn: () => selectedPhoneNumber 
@@ -85,6 +87,42 @@ const Dashboard = () => {
       title: "Success",
       description: "Phone number added and ready for tracking",
     });
+  };
+  
+  const handleAddCurrentLocation = async (coords: {latitude: number, longitude: number, accuracy: number}) => {
+    if (!selectedPhoneNumber) {
+      toast({
+        title: "Error",
+        description: "Please select a phone number first",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    try {
+      await api.addLocation(
+        selectedPhoneNumber,
+        coords.latitude,
+        coords.longitude,
+        coords.accuracy
+      );
+      
+      refetchLocations();
+      
+      const country = detectCountry(selectedPhoneNumber);
+      const countryName = country ? `${country.country} (${country.flag})` : "Unknown";
+      
+      toast({
+        title: "Location Added",
+        description: `Current location added for ${selectedPhoneNumber} in ${countryName}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to add current location",
+        variant: "destructive"
+      });
+    }
   };
   
   const calculateStats = () => {
@@ -191,7 +229,11 @@ const Dashboard = () => {
             {isLoadingLocations ? (
               <Skeleton className="w-full h-[300px] rounded-lg" />
             ) : (
-              <LocationMap locations={locations || []} height="300px" />
+              <LocationMap 
+                locations={locations || []} 
+                height="300px"
+                onAddCurrentLocation={handleAddCurrentLocation}
+              />
             )}
           </div>
           

@@ -264,6 +264,36 @@ export const api = {
     setTimeout(() => resolve(filteredLocations), 300);
   }),
   
+  // Add a new location for a phone number
+  addLocation: (phoneNumber: string, latitude: number, longitude: number, accuracy: number) => 
+    new Promise<LocationData>((resolve) => {
+      // Find contact info
+      const contact = contacts.find(c => c.phoneNumber === phoneNumber);
+      
+      const newLocation: LocationData = {
+        id: `location-${Date.now()}`,
+        phoneNumber,
+        contactName: contact?.isSaved ? contact.name : undefined,
+        latitude,
+        longitude,
+        accuracy,
+        timestamp: format(new Date(), "yyyy-MM-dd'T'HH:mm:ss"),
+        address: "Current Location", // In a real app, would use reverse geocoding
+      };
+      
+      // Update tracked number's last seen
+      trackedNumbers = trackedNumbers.map(num => 
+        num.phoneNumber === phoneNumber 
+          ? { ...num, lastSeen: newLocation.timestamp }
+          : num
+      );
+      
+      // Add to locations
+      locations = [newLocation, ...locations];
+      
+      setTimeout(() => resolve(newLocation), 300);
+  }),
+  
   // Activity logs
   getActivities: () => new Promise<ActivityLog[]>((resolve) => {
     setTimeout(() => resolve(activities), 500);

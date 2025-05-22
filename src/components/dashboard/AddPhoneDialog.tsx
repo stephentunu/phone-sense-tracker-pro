@@ -12,9 +12,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, MapPin } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { api } from '@/lib/api';
+import { detectCountry } from '@/utils/phoneUtils';
 
 interface AddPhoneDialogProps {
   onSuccess?: () => void;
@@ -25,7 +26,16 @@ export const AddPhoneDialog = ({ onSuccess }: AddPhoneDialogProps) => {
   const [label, setLabel] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [open, setOpen] = useState(false);
+  const [detectedCountry, setDetectedCountry] = useState<string | undefined>(undefined);
   const { toast } = useToast();
+  
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setPhoneNumber(value);
+    
+    const country = detectCountry(value);
+    setDetectedCountry(country ? `${country.flag} ${country.country}` : undefined);
+  };
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,8 +96,14 @@ export const AddPhoneDialog = ({ onSuccess }: AddPhoneDialogProps) => {
               id="phone"
               placeholder="+1 (555) 123-4567"
               value={phoneNumber}
-              onChange={(e) => setPhoneNumber(e.target.value)}
+              onChange={handlePhoneChange}
             />
+            {detectedCountry && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                <MapPin className="h-3.5 w-3.5" />
+                <span>{detectedCountry}</span>
+              </div>
+            )}
           </div>
           
           <div className="space-y-2">

@@ -9,6 +9,10 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { LocationMap } from '@/components/dashboard/LocationMap';
 import { TrackedNumberCard } from '@/components/dashboard/TrackedNumberCard';
+import { AddPhoneDialog } from '@/components/dashboard/AddPhoneDialog';
+import { MapPin, Clock } from 'lucide-react';
+import { detectCountry } from '@/utils/phoneUtils';
+import { format } from 'date-fns';
 
 const LocationTracking = () => {
   const { toast } = useToast();
@@ -18,6 +22,7 @@ const LocationTracking = () => {
   const { 
     data: trackedNumbers, 
     isLoading: isLoadingTrackedNumbers,
+    refetch: refetchTrackedNumbers,
   } = useQuery({
     queryKey: ['trackedNumbers'],
     queryFn: api.getTrackedNumbers,
@@ -49,10 +54,25 @@ const LocationTracking = () => {
     });
   };
   
+  const handleAddPhoneSuccess = () => {
+    refetchTrackedNumbers();
+    toast({
+      title: "Success",
+      description: "Phone number added and ready for tracking",
+    });
+  };
+  
+  // Get current location (most recent)
+  const currentLocation = locations && locations.length > 0 ? locations[0] : null;
+  
+  // Get country information
+  const countryInfo = selectedPhoneNumber ? detectCountry(selectedPhoneNumber) : null;
+  
   return (
     <AppLayout>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Location Tracking</h1>
+        <AddPhoneDialog onSuccess={handleAddPhoneSuccess} />
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
@@ -92,6 +112,43 @@ const LocationTracking = () => {
               )}
             </div>
           )}
+          
+          {/* Current Location Card */}
+          {selectedPhoneNumber && currentLocation && (
+            <Card className="mt-6 bg-muted/50">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <MapPin className="h-4 w-4" />
+                  Current Location
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="space-y-2">
+                  {countryInfo && (
+                    <div className="flex items-center gap-1.5 text-sm">
+                      <span className="text-lg">{countryInfo.flag}</span>
+                      <span className="font-medium">{countryInfo.country}</span>
+                    </div>
+                  )}
+                  
+                  <div className="text-sm">
+                    <p className="font-medium">{currentLocation.address || 'Unknown address'}</p>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                      <Clock className="h-3 w-3" /> 
+                      {format(new Date(currentLocation.timestamp), 'MMM d, h:mm a')}
+                    </p>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Lat: {currentLocation.latitude.toFixed(6)}, 
+                      Long: {currentLocation.longitude.toFixed(6)}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Accuracy: {currentLocation.accuracy.toFixed(1)}m
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
         
         {/* Main Content */}
@@ -125,10 +182,16 @@ const LocationTracking = () => {
                         <div>
                           <p className="font-medium">{location.contactName || 'Unknown'}</p>
                           <p className="text-sm text-muted-foreground">{location.address || 'Unknown location'}</p>
+                          {countryInfo && (
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                              <span>{countryInfo.flag}</span>
+                              <span>{countryInfo.country}</span>
+                            </div>
+                          )}
                         </div>
                         <div className="text-right">
                           <p className="text-sm">
-                            {new Date(location.timestamp).toLocaleString()}
+                            {format(new Date(location.timestamp), 'MMM d, h:mm a')}
                           </p>
                           <p className="text-xs text-muted-foreground">
                             Accuracy: {location.accuracy.toFixed(1)}m
