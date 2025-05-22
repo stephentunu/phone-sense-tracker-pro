@@ -146,22 +146,22 @@ const generateMockActivities = (): ActivityLog[] => {
     let details = '';
     switch (activityType) {
       case 'call':
-        details = [`Outgoing call (${Math.floor(Math.random() * 10) + 1} minutes)`, 
-                   `Incoming call (${Math.floor(Math.random() * 10) + 1} minutes)`, 
+        details = ['Outgoing call (${Math.floor(Math.random() * 10) + 1} minutes)', 
+                   'Incoming call (${Math.floor(Math.random() * 10) + 1} minutes)', 
                    'Missed call'][Math.floor(Math.random() * 3)];
         break;
       case 'text':
-        details = [`Sent message: "${['Hey', 'Hello', 'Hi', 'What\'s up', 'Call me back'][Math.floor(Math.random() * 5)]}"`, 
-                   `Received message: "${['Ok', 'Sure', 'See you soon', 'I\'ll call you later', 'Where are you?'][Math.floor(Math.random() * 5)]}"`][Math.floor(Math.random() * 2)];
+        details = ['Sent message: "${["Hey", "Hello", "Hi", "What\'s up", "Call me back"][Math.floor(Math.random() * 5)]}"', 
+                   'Received message: "${["Ok", "Sure", "See you soon", "I\'ll call you later", "Where are you?"][Math.floor(Math.random() * 5)]}"'][Math.floor(Math.random() * 2)];
         break;
       case 'location':
-        details = [`Location updated: ${['New York', 'Los Angeles', 'Chicago', 'Houston', 'Phoenix'][Math.floor(Math.random() * 5)]}`];
+        details = 'Location updated: ${["New York", "Los Angeles", "Chicago", "Houston", "Phoenix"][Math.floor(Math.random() * 5)]}';
         break;
       case 'app':
-        details = [`Used app: ${['Facebook', 'Instagram', 'WhatsApp', 'TikTok', 'Snapchat'][Math.floor(Math.random() * 5)]} for ${Math.floor(Math.random() * 60) + 1} minutes`];
+        details = 'Used app: ${["Facebook", "Instagram", "WhatsApp", "TikTok", "Snapchat"][Math.floor(Math.random() * 5)]} for ${Math.floor(Math.random() * 60) + 1} minutes';
         break;
       case 'web':
-        details = [`Visited website: ${['google.com', 'youtube.com', 'facebook.com', 'amazon.com', 'twitter.com'][Math.floor(Math.random() * 5)]}`];
+        details = 'Visited website: ${["google.com", "youtube.com", "facebook.com", "amazon.com", "twitter.com"][Math.floor(Math.random() * 5)]}';
         break;
     }
     
