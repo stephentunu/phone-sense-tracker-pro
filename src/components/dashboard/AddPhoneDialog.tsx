@@ -18,7 +18,7 @@ import { api } from '@/lib/api';
 import { detectCountry } from '@/utils/phoneUtils';
 
 interface AddPhoneDialogProps {
-  onSuccess?: () => void;
+  onSuccess?: (phoneNumber: string) => void;
 }
 
 export const AddPhoneDialog = ({ onSuccess }: AddPhoneDialogProps) => {
@@ -51,7 +51,7 @@ export const AddPhoneDialog = ({ onSuccess }: AddPhoneDialogProps) => {
     setIsSubmitting(true);
     
     try {
-      await api.addTrackedNumber(phoneNumber, label || 'Unknown');
+      const result = await api.addTrackedNumber(phoneNumber, label || 'Unknown');
       
       toast({
         title: "Success",
@@ -61,7 +61,11 @@ export const AddPhoneDialog = ({ onSuccess }: AddPhoneDialogProps) => {
       setOpen(false);
       setPhoneNumber('');
       setLabel('');
-      onSuccess?.();
+      
+      // Pass the phone number to parent for immediate selection
+      if (onSuccess) {
+        onSuccess(result.phoneNumber);
+      }
     } catch (error) {
       toast({
         title: "Error",

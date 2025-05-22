@@ -27,6 +27,22 @@ export const countryCodes: CountryCode[] = [
   { code: '+47', country: 'Norway', flag: '🇳🇴' },
   { code: '+45', country: 'Denmark', flag: '🇩🇰' },
   { code: '+358', country: 'Finland', flag: '🇫🇮' },
+  { code: '+20', country: 'Egypt', flag: '🇪🇬' },
+  { code: '+351', country: 'Portugal', flag: '🇵🇹' },
+  { code: '+30', country: 'Greece', flag: '🇬🇷' },
+  { code: '+972', country: 'Israel', flag: '🇮🇱' },
+  { code: '+90', country: 'Turkey', flag: '🇹🇷' },
+  { code: '+380', country: 'Ukraine', flag: '🇺🇦' },
+  { code: '+971', country: 'United Arab Emirates', flag: '🇦🇪' },
+  { code: '+966', country: 'Saudi Arabia', flag: '🇸🇦' },
+  { code: '+234', country: 'Nigeria', flag: '🇳🇬' },
+  { code: '+254', country: 'Kenya', flag: '🇰🇪' },
+  { code: '+62', country: 'Indonesia', flag: '🇮🇩' },
+  { code: '+84', country: 'Vietnam', flag: '🇻🇳' },
+  { code: '+60', country: 'Malaysia', flag: '🇲🇾' },
+  { code: '+63', country: 'Philippines', flag: '🇵🇭' },
+  { code: '+65', country: 'Singapore', flag: '🇸🇬' },
+  { code: '+66', country: 'Thailand', flag: '🇹🇭' },
 ];
 
 /**
@@ -37,11 +53,14 @@ export const countryCodes: CountryCode[] = [
 export const detectCountry = (phoneNumber: string): CountryCode | undefined => {
   if (!phoneNumber) return undefined;
   
-  // Clean the phone number
-  const cleanedNumber = phoneNumber.replace(/\s+/g, '');
+  // Clean the phone number - remove spaces, dashes, parentheses, etc.
+  const cleanedNumber = phoneNumber.replace(/[\s\-\(\)\.]/g, '');
+  
+  // Sort country codes by length (longest first) to match most specific code
+  const sortedCodes = [...countryCodes].sort((a, b) => b.code.length - a.code.length);
   
   // Try to find a matching country code
-  return countryCodes.find(country => 
+  return sortedCodes.find(country => 
     cleanedNumber.startsWith(country.code)
   );
 };
@@ -54,4 +73,40 @@ export const formatPhoneWithCountry = (phoneNumber: string): string => {
   if (!country) return phoneNumber;
   
   return `${phoneNumber} ${country.flag} (${country.country})`;
+};
+
+/**
+ * Format phone number in a standardized way
+ */
+export const formatPhoneNumber = (phoneNumber: string): string => {
+  if (!phoneNumber) return '';
+  
+  // Clean the phone number
+  const cleaned = phoneNumber.replace(/\D/g, '');
+  
+  // Check if it's likely a US/Canada number (length 10 or 11 with country code)
+  if (cleaned.length === 10) {
+    return `(${cleaned.substring(0, 3)}) ${cleaned.substring(3, 6)}-${cleaned.substring(6, 10)}`;
+  } else if (cleaned.length === 11 && cleaned.startsWith('1')) {
+    return `+1 (${cleaned.substring(1, 4)}) ${cleaned.substring(4, 7)}-${cleaned.substring(7, 11)}`;
+  }
+  
+  // For international numbers, try to format with the country code
+  const country = detectCountry(phoneNumber);
+  if (country) {
+    const codeLength = country.code.length - 1; // -1 for the + symbol
+    const nationalNumber = cleaned.substring(codeLength);
+    
+    // Group the remaining digits in pairs
+    let formatted = '';
+    for (let i = 0; i < nationalNumber.length; i += 2) {
+      formatted += nationalNumber.substring(i, Math.min(i + 2, nationalNumber.length));
+      if (i + 2 < nationalNumber.length) formatted += ' ';
+    }
+    
+    return `${country.code} ${formatted}`;
+  }
+  
+  // Default formatting for unknown patterns
+  return phoneNumber;
 };

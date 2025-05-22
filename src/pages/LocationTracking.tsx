@@ -13,10 +13,12 @@ import { AddPhoneDialog } from '@/components/dashboard/AddPhoneDialog';
 import { MapPin, Clock } from 'lucide-react';
 import { detectCountry } from '@/utils/phoneUtils';
 import { format } from 'date-fns';
+import { useGeolocation } from '@/hooks/useGeolocation';
 
 const LocationTracking = () => {
   const { toast } = useToast();
   const [selectedPhoneNumber, setSelectedPhoneNumber] = useState<string | null>(null);
+  const geolocation = useGeolocation();
   
   // Fetch tracked numbers
   const { 
@@ -32,11 +34,13 @@ const LocationTracking = () => {
   const { 
     data: locations,
     isLoading: isLoadingLocations,
+    refetch: refetchLocations
   } = useQuery({
     queryKey: ['locations', selectedPhoneNumber],
     queryFn: () => selectedPhoneNumber 
       ? api.getLocationsByNumber(selectedPhoneNumber)
       : api.getLocations(),
+    enabled: !!selectedPhoneNumber || trackedNumbers?.length === 0
   });
   
   // Set the first tracked number as selected by default
@@ -54,12 +58,66 @@ const LocationTracking = () => {
     });
   };
   
-  const handleAddPhoneSuccess = () => {
+  const handleAddPhoneSuccess = (phoneNumber: string) => {
     refetchTrackedNumbers();
+    setSelectedPhoneNumber(phoneNumber);
     toast({
       title: "Success",
       description: "Phone number added and ready for tracking",
     });
+  };
+  
+  const handleAddCurrentLocation = async () => {
+    if (!selectedPhoneNumber) {
+      toast({
+        title: "Error",
+        description: "Please select a phone number first",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (geolocation.error) {
+      toast({
+        title: "Geolocation Error",
+        description: geolocation.error,
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (geolocation.isLoading || !geolocation.latitude || !geolocation.longitude) {
+      toast({
+        title: "Getting location",
+        description: "Please wait while we get your current location",
+      });
+      return;
+    }
+    
+    try {
+      await api.addLocation(
+        selectedPhoneNumber,
+        geolocation.latitude,
+        geolocation.longitude,
+        geolocation.accuracy || 10
+      );
+      
+      refetchLocations();
+      
+      const country = detectCountry(selectedPhoneNumber);
+      const countryName = country ? `${country.country} (${country.flag})` : "Unknown";
+      
+      toast({
+        title: "Location Added",
+        description: `Current location added for ${selectedPhoneNumber} in ${countryName}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to add current location",
+        variant: "destructive"
+      });
+    }
   };
   
   // Get current location (most recent)
@@ -106,7 +164,7 @@ const LocationTracking = () => {
                 <Card>
                   <CardContent className="flex flex-col items-center justify-center py-6">
                     <p className="text-muted-foreground mb-2">No phones tracked yet</p>
-                    <Button size="sm">Add Phone Number</Button>
+                    <AddPhoneDialog onSuccess={handleAddPhoneSuccess} />
                   </CardContent>
                 </Card>
               )}
@@ -149,6 +207,16 @@ const LocationTracking = () => {
               </CardContent>
             </Card>
           )}
+          
+          {/* Add Current Location Button */}
+          <Button 
+            onClick={handleAddCurrentLocation} 
+            className="w-full mt-3 gap-2"
+            disabled={!selectedPhoneNumber || geolocation.isLoading}
+          >
+            <MapPin className="h-4 w-4" />
+            {geolocation.isLoading ? 'Getting Location...' : 'Add Current Location'}
+          </Button>
         </div>
         
         {/* Main Content */}
@@ -158,7 +226,15 @@ const LocationTracking = () => {
             {isLoadingLocations ? (
               <Skeleton className="w-full h-[500px] rounded-lg" />
             ) : (
-              <LocationMap locations={locations || []} height="500px" />
+              <LocationMap 
+                locations={locations || []} 
+                height="500px" 
+                currentLocation={geolocation.latitude && geolocation.longitude ? {
+                  latitude: geolocation.latitude,
+                  longitude: geolocation.longitude,
+                  accuracy: geolocation.accuracy || 10
+                } : undefined}
+              />
             )}
           </div>
           
@@ -175,9 +251,9 @@ const LocationTracking = () => {
                       <Skeleton key={i} className="h-16 w-full" />
                     ))}
                   </div>
-                ) : (
+                ) : locations && locations.length > 0 ? (
                   <div className="space-y-4">
-                    {(locations || []).map((location) => (
+                    {locations.map((location) => (
                       <div key={location.id} className="border rounded-lg p-4 flex justify-between items-center">
                         <div>
                           <p className="font-medium">{location.contactName || 'Unknown'}</p>
@@ -194,11 +270,28 @@ const LocationTracking = () => {
                             {format(new Date(location.timestamp), 'MMM d, h:mm a')}
                           </p>
                           <p className="text-xs text-muted-foreground">
+                            Lat: {location.latitude.toFixed(6)}, Long: {location.longitude.toFixed(6)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
                             Accuracy: {location.accuracy.toFixed(1)}m
                           </p>
                         </div>
                       </div>
                     ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground">No location history available</p>
+                    {selectedPhoneNumber && (
+                      <Button 
+                        onClick={handleAddCurrentLocation} 
+                        className="mt-3 gap-2"
+                        disabled={geolocation.isLoading}
+                      >
+                        <MapPin className="h-4 w-4" />
+                        Add Current Location
+                      </Button>
+                    )}
                   </div>
                 )}
               </CardContent>

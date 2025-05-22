@@ -16,11 +16,13 @@ import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { detectCountry } from '@/utils/phoneUtils';
+import { useGeolocation } from '@/hooks/useGeolocation';
 
 const Dashboard = () => {
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const [selectedPhoneNumber, setSelectedPhoneNumber] = useState<string | null>(null);
+  const geolocation = useGeolocation();
   
   // Fetch tracked numbers
   const { 
@@ -41,6 +43,7 @@ const Dashboard = () => {
     queryFn: () => selectedPhoneNumber 
       ? api.getActivitiesByNumber(selectedPhoneNumber)
       : api.getActivities(),
+    enabled: !!selectedPhoneNumber || trackedNumbers?.length === 0
   });
   
   // Fetch calls
@@ -52,6 +55,7 @@ const Dashboard = () => {
     queryFn: () => selectedPhoneNumber 
       ? api.getCallsByNumber(selectedPhoneNumber)
       : api.getCalls(),
+    enabled: !!selectedPhoneNumber || trackedNumbers?.length === 0
   });
   
   // Fetch locations
@@ -64,6 +68,7 @@ const Dashboard = () => {
     queryFn: () => selectedPhoneNumber 
       ? api.getLocationsByNumber(selectedPhoneNumber)
       : api.getLocations(),
+    enabled: !!selectedPhoneNumber || trackedNumbers?.length === 0
   });
   
   // Set the first tracked number as selected by default
@@ -81,8 +86,9 @@ const Dashboard = () => {
     });
   };
   
-  const handleAddPhoneSuccess = () => {
+  const handleAddPhoneSuccess = (phoneNumber: string) => {
     refetchTrackedNumbers();
+    setSelectedPhoneNumber(phoneNumber);
     toast({
       title: "Success",
       description: "Phone number added and ready for tracking",
@@ -187,11 +193,26 @@ const Dashboard = () => {
                 <Card>
                   <CardContent className="flex flex-col items-center justify-center py-6">
                     <p className="text-muted-foreground mb-2">No phones tracked yet</p>
-                    <Button size="sm">Add Phone Number</Button>
+                    <AddPhoneDialog onSuccess={handleAddPhoneSuccess} />
                   </CardContent>
                 </Card>
               )}
             </div>
+          )}
+          
+          {/* Add Current Location Button */}
+          {selectedPhoneNumber && geolocation.latitude && geolocation.longitude && (
+            <Button 
+              onClick={() => handleAddCurrentLocation({
+                latitude: geolocation.latitude!,
+                longitude: geolocation.longitude!,
+                accuracy: geolocation.accuracy || 10
+              })} 
+              className="w-full gap-2"
+            >
+              <Map className="h-4 w-4" />
+              Add Current Location
+            </Button>
           )}
         </div>
         
@@ -233,6 +254,11 @@ const Dashboard = () => {
                 locations={locations || []} 
                 height="300px"
                 onAddCurrentLocation={handleAddCurrentLocation}
+                currentLocation={geolocation.latitude && geolocation.longitude ? {
+                  latitude: geolocation.latitude,
+                  longitude: geolocation.longitude,
+                  accuracy: geolocation.accuracy || 10
+                } : undefined}
               />
             )}
           </div>
