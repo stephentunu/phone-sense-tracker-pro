@@ -194,12 +194,14 @@ const generateTrackedNumbers = (): TrackedNumber[] => {
   }));
 };
 
+// Reset tracked numbers to an empty array
+let trackedNumbers: TrackedNumber[] = [];
+
 // API mock functions
 let contacts = generateMockContacts();
 let calls = generateMockCalls();
 let locations = generateMockLocations();
 let activities = generateMockActivities();
-let trackedNumbers = generateTrackedNumbers();
 
 export const api = {
   // Tracked numbers
