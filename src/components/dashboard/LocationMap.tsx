@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { MapPin, Target, Navigation, Ruler } from 'lucide-react';
 import { calculateDistance, formatDistance } from '@/utils/geoUtils';
+import { Input } from '@/components/ui/input';
 
 interface CurrentLocationProps {
   latitude: number;
@@ -30,12 +31,18 @@ export const LocationMap = ({
   currentLocation
 }: LocationMapProps) => {
   const [isMapLoaded, setIsMapLoaded] = useState(false);
+  const [mapboxToken, setMapboxToken] = useState<string>('');
+  const [showTokenInput, setShowTokenInput] = useState(true);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   
-  // This would normally use a real map API like Google Maps or Leaflet
-  // For this demo, we'll create a simplified visual representation
-  
   useEffect(() => {
+    // Check for saved token in localStorage
+    const savedToken = localStorage.getItem('mapbox_token');
+    if (savedToken) {
+      setMapboxToken(savedToken);
+      setShowTokenInput(false);
+    }
+    
     // Simulate map loading
     const timer = setTimeout(() => setIsMapLoaded(true), 500);
     return () => clearTimeout(timer);
@@ -46,12 +53,59 @@ export const LocationMap = ({
       onAddCurrentLocation(currentLocation);
     }
   };
+  
+  const handleTokenSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (mapboxToken) {
+      localStorage.setItem('mapbox_token', mapboxToken);
+      setShowTokenInput(false);
+    }
+  };
 
   // Generate map URL centered on current location if available
   const getMapBackgroundUrl = () => {
-    if (currentLocation) {
-      return `https://api.mapbox.com/styles/v1/mapbox/streets-v11/static/${currentLocation.longitude},${currentLocation.latitude},12/1200x400?access_token=pk.placeholder`;
+    // If we have a token, use Mapbox
+    if (mapboxToken && !showTokenInput) {
+      // Center on current location if available, otherwise on tracked locations or default to US
+      let centerLat, centerLng, zoom;
+      
+      if (currentLocation) {
+        centerLat = currentLocation.latitude;
+        centerLng = currentLocation.longitude;
+        zoom = 12;
+      } else if (locations.length > 0) {
+        centerLat = locations[0].latitude;
+        centerLng = locations[0].longitude;
+        zoom = 10;
+      } else {
+        centerLat = 37.7749;
+        centerLng = -122.4194;
+        zoom = 3;
+      }
+      
+      // Build marker string for all locations
+      let markers = '';
+      
+      // Add tracked locations markers
+      locations.slice(0, 10).forEach(location => {
+        markers += `pin-s+f43f5e(${location.longitude},${location.latitude}),`;
+      });
+      
+      // Add current location marker if available
+      if (currentLocation) {
+        markers += `pin-s+0077ff(${currentLocation.longitude},${currentLocation.latitude})`;
+      } else if (markers.endsWith(',')) {
+        // Remove trailing comma if no current location
+        markers = markers.slice(0, -1);
+      }
+      
+      // Build Mapbox Static API URL
+      return `https://api.mapbox.com/styles/v1/mapbox/streets-v11/static/${
+        markers ? markers + '/' : ''
+      }${centerLng},${centerLat},${zoom}/1200x${parseInt(height)}@2x?access_token=${mapboxToken}`;
     }
+    
+    // Fallback to placeholder map
     return `https://api.mapbox.com/styles/v1/mapbox/streets-v11/static/-95.7129,37.0902,3/1200x400?access_token=pk.placeholder`;
   };
   
@@ -74,14 +128,49 @@ export const LocationMap = ({
       <CardContent className="pt-4">
         {!isMapLoaded ? (
           <Skeleton className={`w-full rounded-md`} style={{ height }} />
+        ) : showTokenInput ? (
+          <div className="p-4 border border-dashed rounded-md flex flex-col items-center justify-center space-y-4" style={{ height }}>
+            <h3 className="text-lg font-medium">Mapbox API Token Required</h3>
+            <p className="text-sm text-muted-foreground text-center max-w-md">
+              To display a live geographical map, please enter your Mapbox public API token.
+              You can get one for free at <a href="https://mapbox.com" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">mapbox.com</a>
+            </p>
+            <form onSubmit={handleTokenSubmit} className="w-full max-w-md space-y-2">
+              <Input
+                value={mapboxToken}
+                onChange={(e) => setMapboxToken(e.target.value)}
+                placeholder="Enter Mapbox public token"
+                className="w-full"
+              />
+              <Button type="submit" className="w-full">
+                Save Token & Load Map
+              </Button>
+            </form>
+          </div>
         ) : (
           <div className="relative w-full rounded-md overflow-hidden" style={{ height }}>
             <div 
               ref={mapContainerRef}
               className="bg-gray-100 w-full h-full relative"
-              style={{ backgroundImage: `url("${getMapBackgroundUrl()}")`, backgroundSize: 'cover', backgroundPosition: 'center' }}
             >
-              {/* Tracked Phone Locations */}
+              {/* Map Image */}
+              <img 
+                src={getMapBackgroundUrl()}
+                alt="Location Map" 
+                className="w-full h-full object-cover"
+                onLoad={() => console.log("Map image loaded successfully")}
+                onError={() => console.error("Error loading map image")}
+              />
+              
+              {/* Current Location Display */}
+              {currentLocation && currentLocation.locationName && (
+                <div className="absolute top-2 left-2 bg-white/90 py-1 px-3 rounded-full shadow-md text-sm font-medium flex items-center gap-1.5">
+                  <MapPin className="h-3 w-3 text-blue-500" />
+                  {currentLocation.locationName}
+                </div>
+              )}
+              
+              {/* Location Info Tooltips */}
               {locations.slice(0, 10).map((location, index) => {
                 let distance = null;
                 if (currentLocation) {
@@ -93,19 +182,22 @@ export const LocationMap = ({
                   );
                 }
                 
+                // Calculate visual position - this is just for tooltips,
+                // actual pins are rendered on the static map image
+                const left = 25 + (index * 8) % 60;
+                const top = 30 + (index * 6) % 50;
+                
                 return (
                   <div 
                     key={location.id}
                     className="absolute transform -translate-x-1/2 -translate-y-1/2 z-10"
                     style={{
-                      // This is just a visual approximation, not actual geo mapping
-                      left: `${25 + (index * 8) % 60}%`,
-                      top: `${30 + (index * 6) % 50}%`,
+                      left: `${left}%`,
+                      top: `${top}%`,
                     }}
                   >
                     <div className="relative group">
-                      <div className="h-4 w-4 rounded-full bg-tracker-primary animate-pulse-soft" />
-                      <div className="absolute inset-0 rounded-full bg-tracker-primary/30 animate-ping" style={{ animationDuration: '3s' }} />
+                      <div className="h-4 w-4 rounded-full bg-tracker-primary/0" /> {/* Invisible but keeps tooltip positioning */}
                       
                       <div className="opacity-0 group-hover:opacity-100 absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-white rounded shadow-md text-xs whitespace-nowrap transition-opacity z-20">
                         <p>{location.contactName || 'Unknown'}</p>
@@ -125,37 +217,11 @@ export const LocationMap = ({
                 );
               })}
               
-              {/* User's Current Location (if available) */}
-              {currentLocation && (
-                <div 
-                  className="absolute transform -translate-x-1/2 -translate-y-1/2 z-20"
-                  style={{
-                    left: '50%',
-                    top: '50%',
-                  }}
-                >
-                  <div className="relative group">
-                    <div className="h-5 w-5 rounded-full bg-blue-500 flex items-center justify-center">
-                      <div className="h-2 w-2 rounded-full bg-white" />
-                    </div>
-                    <div className="absolute inset-0 rounded-full bg-blue-500/30 animate-ping" style={{ animationDuration: '1.5s' }} />
-                    
-                    <div className="opacity-0 group-hover:opacity-100 absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-white rounded shadow-md text-xs whitespace-nowrap transition-opacity z-20">
-                      <p>Your current location</p>
-                      {currentLocation.locationName && (
-                        <p className="text-xs font-medium">{currentLocation.locationName}</p>
-                      )}
-                      <p className="text-xs text-muted-foreground">
-                        Lat: {currentLocation.latitude.toFixed(6)}, Long: {currentLocation.longitude.toFixed(6)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Accuracy: ±{currentLocation.accuracy.toFixed(1)}m
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
+              {/* Navigation Compass */}
+              <div className="absolute top-2 right-2 bg-white p-2 rounded-full shadow-md">
+                <Navigation className="h-5 w-5 text-blue-500" />
+              </div>
+
               {/* Legend */}
               <div className="absolute bottom-2 left-2 bg-white p-2 rounded shadow-md text-xs">
                 <div className="flex flex-col gap-2">
@@ -170,19 +236,6 @@ export const LocationMap = ({
                   </div>
                 </div>
               </div>
-              
-              {/* Navigation Compass */}
-              <div className="absolute top-2 right-2 bg-white p-2 rounded-full shadow-md">
-                <Navigation className="h-5 w-5 text-blue-500" />
-              </div>
-
-              {/* Current Location Display */}
-              {currentLocation && currentLocation.locationName && (
-                <div className="absolute top-2 left-2 bg-white/90 py-1 px-3 rounded-full shadow-md text-sm font-medium flex items-center gap-1.5">
-                  <MapPin className="h-3 w-3 text-blue-500" />
-                  {currentLocation.locationName}
-                </div>
-              )}
             </div>
           </div>
         )}
