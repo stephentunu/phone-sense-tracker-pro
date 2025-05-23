@@ -6,11 +6,12 @@ import { api, LocationData, TrackedNumber } from '@/lib/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
 import { LocationMap } from '@/components/dashboard/LocationMap';
 import { TrackedNumberCard } from '@/components/dashboard/TrackedNumberCard';
 import { AddPhoneDialog } from '@/components/dashboard/AddPhoneDialog';
-import { MapPin, Clock, Ruler } from 'lucide-react';
+import { MapPin, Clock, Ruler, Search } from 'lucide-react';
 import { detectCountry } from '@/utils/phoneUtils';
 import { format } from 'date-fns';
 import { useGeolocation } from '@/hooks/useGeolocation';
@@ -19,6 +20,7 @@ import { calculateDistance, formatDistance } from '@/utils/geoUtils';
 const LocationTracking = () => {
   const { toast } = useToast();
   const [selectedPhoneNumber, setSelectedPhoneNumber] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const geolocation = useGeolocation();
   
   // Fetch tracked numbers
@@ -30,6 +32,12 @@ const LocationTracking = () => {
     queryKey: ['trackedNumbers'],
     queryFn: api.getTrackedNumbers,
   });
+  
+  // Filter tracked numbers based on search query
+  const filteredTrackedNumbers = trackedNumbers?.filter(number => 
+    number.phoneNumber.includes(searchQuery) || 
+    number.label.toLowerCase().includes(searchQuery.toLowerCase())
+  );
   
   // Fetch locations
   const { 
@@ -46,10 +54,13 @@ const LocationTracking = () => {
   
   // Set the first tracked number as selected by default
   useEffect(() => {
-    if (trackedNumbers?.length && !selectedPhoneNumber) {
-      setSelectedPhoneNumber(trackedNumbers[0].phoneNumber);
+    if (filteredTrackedNumbers?.length && !selectedPhoneNumber) {
+      setSelectedPhoneNumber(filteredTrackedNumbers[0].phoneNumber);
+    } else if (filteredTrackedNumbers?.length === 0) {
+      // Clear selection if no phones match the search
+      setSelectedPhoneNumber(null);
     }
-  }, [trackedNumbers, selectedPhoneNumber]);
+  }, [filteredTrackedNumbers, selectedPhoneNumber]);
   
   const handleTrackedNumberClick = (phoneNumber: string) => {
     setSelectedPhoneNumber(phoneNumber);
@@ -122,6 +133,10 @@ const LocationTracking = () => {
     }
   };
   
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+  };
+  
   // Get current location (most recent)
   const currentLocation = locations && locations.length > 0 ? locations[0] : null;
   
@@ -138,8 +153,17 @@ const LocationTracking = () => {
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
         {/* Tracked Numbers */}
         <div className="md:col-span-3 space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-2">
             <h2 className="text-xl font-semibold">Tracked Numbers</h2>
+            <div className="relative">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search phone number..."
+                className="pl-8"
+                value={searchQuery}
+                onChange={handleSearchChange}
+              />
+            </div>
           </div>
           
           {isLoadingTrackedNumbers ? (
@@ -154,14 +178,21 @@ const LocationTracking = () => {
             </div>
           ) : (
             <div className="space-y-3">
-              {trackedNumbers?.length ? (
-                trackedNumbers.map((number) => (
+              {filteredTrackedNumbers?.length ? (
+                filteredTrackedNumbers.map((number) => (
                   <TrackedNumberCard 
                     key={number.phoneNumber} 
                     trackedNumber={number}
                     onClick={handleTrackedNumberClick}
                   />
                 ))
+              ) : searchQuery ? (
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center py-6">
+                    <p className="text-muted-foreground mb-2">No matching phones found</p>
+                    <Button variant="outline" onClick={() => setSearchQuery('')}>Clear Search</Button>
+                  </CardContent>
+                </Card>
               ) : (
                 <Card>
                   <CardContent className="flex flex-col items-center justify-center py-6">
