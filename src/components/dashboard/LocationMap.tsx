@@ -46,6 +46,14 @@ export const LocationMap = ({
       onAddCurrentLocation(currentLocation);
     }
   };
+
+  // Generate map URL centered on current location if available
+  const getMapBackgroundUrl = () => {
+    if (currentLocation) {
+      return `https://api.mapbox.com/styles/v1/mapbox/streets-v11/static/${currentLocation.longitude},${currentLocation.latitude},12/1200x400?access_token=pk.placeholder`;
+    }
+    return `https://api.mapbox.com/styles/v1/mapbox/streets-v11/static/-95.7129,37.0902,3/1200x400?access_token=pk.placeholder`;
+  };
   
   return (
     <Card className={className}>
@@ -71,7 +79,7 @@ export const LocationMap = ({
             <div 
               ref={mapContainerRef}
               className="bg-gray-100 w-full h-full relative"
-              style={{ backgroundImage: 'url("https://api.mapbox.com/styles/v1/mapbox/streets-v11/static/-95.7129,37.0902,3/1200x400?access_token=pk.placeholder")', backgroundSize: 'cover', backgroundPosition: 'center' }}
+              style={{ backgroundImage: `url("${getMapBackgroundUrl()}")`, backgroundSize: 'cover', backgroundPosition: 'center' }}
             >
               {/* Tracked Phone Locations */}
               {locations.slice(0, 10).map((location, index) => {
@@ -167,6 +175,14 @@ export const LocationMap = ({
               <div className="absolute top-2 right-2 bg-white p-2 rounded-full shadow-md">
                 <Navigation className="h-5 w-5 text-blue-500" />
               </div>
+
+              {/* Current Location Display */}
+              {currentLocation && currentLocation.locationName && (
+                <div className="absolute top-2 left-2 bg-white/90 py-1 px-3 rounded-full shadow-md text-sm font-medium flex items-center gap-1.5">
+                  <MapPin className="h-3 w-3 text-blue-500" />
+                  {currentLocation.locationName}
+                </div>
+              )}
             </div>
           </div>
         )}

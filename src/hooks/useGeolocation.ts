@@ -35,21 +35,28 @@ export function useGeolocation(options?: PositionOptions) {
     const successHandler = async (position: GeolocationPosition) => {
       console.log('Geolocation success:', position.coords);
       
-      // Get location name using reverse geocoding
+      // Get location name using reverse geocoding with higher accuracy
       let locationName = null;
       try {
+        // Using a more reliable reverse geocoding service with better global coverage
         const response = await fetch(
-          `https://api.opencagedata.com/geocode/v1/json?q=${position.coords.latitude}+${position.coords.longitude}&key=6d0e711d72d74daeb2b0bfd2a5cdfdba`
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.coords.latitude}&lon=${position.coords.longitude}&zoom=18&addressdetails=1`,
+          {
+            headers: {
+              'User-Agent': 'PhoneTracker/1.0' // Required by Nominatim ToS
+            }
+          }
         );
+        
         const data = await response.json();
-        if (data.results && data.results.length > 0) {
-          const result = data.results[0];
-          const components = result.components;
+        if (data && data.display_name) {
+          // Extract city, state, country from OpenStreetMap response
+          const address = data.address;
           
-          // Build location name from components
-          const city = components.city || components.town || components.village || components.county;
-          const state = components.state;
-          const country = components.country;
+          // Build location name from components with priority for African locations
+          const city = address.city || address.town || address.village || address.hamlet || address.suburb;
+          const state = address.state || address.county;
+          const country = address.country;
           
           const parts = [];
           if (city) parts.push(city);
@@ -57,9 +64,24 @@ export function useGeolocation(options?: PositionOptions) {
           if (country) parts.push(country);
           
           locationName = parts.join(', ');
+          console.log('Location determined:', locationName, 'Full data:', data);
         }
       } catch (error) {
         console.error('Error fetching location name:', error);
+        // Fallback to browser-provided location info if available
+        try {
+          const response = await fetch(
+            `https://api.opencagedata.com/geocode/v1/json?q=${position.coords.latitude}+${position.coords.longitude}&key=6d0e711d72d74daeb2b0bfd2a5cdfdba`
+          );
+          const data = await response.json();
+          if (data.results && data.results.length > 0) {
+            const result = data.results[0];
+            locationName = result.formatted;
+            console.log('Fallback location:', locationName);
+          }
+        } catch (fallbackError) {
+          console.error('Fallback location error:', fallbackError);
+        }
       }
 
       setState({
@@ -82,7 +104,7 @@ export function useGeolocation(options?: PositionOptions) {
       }));
     };
 
-    // Get position immediately
+    // Get position immediately with high accuracy
     setState(prev => ({ ...prev, isLoading: true }));
     
     navigator.geolocation.getCurrentPosition(
@@ -90,18 +112,20 @@ export function useGeolocation(options?: PositionOptions) {
       errorHandler,
       { 
         enableHighAccuracy: true,
-        timeout: 10000,
+        timeout: 15000,
         maximumAge: 0,
         ...options
       }
     );
 
-    // Then set up continuous watching
+    // Then set up continuous watching with high accuracy
     const watchId = navigator.geolocation.watchPosition(
       successHandler,
       errorHandler,
       { 
         enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0,
         ...options
       }
     );
