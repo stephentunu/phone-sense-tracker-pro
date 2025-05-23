@@ -10,10 +10,11 @@ import { useToast } from '@/components/ui/use-toast';
 import { LocationMap } from '@/components/dashboard/LocationMap';
 import { TrackedNumberCard } from '@/components/dashboard/TrackedNumberCard';
 import { AddPhoneDialog } from '@/components/dashboard/AddPhoneDialog';
-import { MapPin, Clock } from 'lucide-react';
+import { MapPin, Clock, Ruler } from 'lucide-react';
 import { detectCountry } from '@/utils/phoneUtils';
 import { format } from 'date-fns';
 import { useGeolocation } from '@/hooks/useGeolocation';
+import { calculateDistance, formatDistance } from '@/utils/geoUtils';
 
 const LocationTracking = () => {
   const { toast } = useToast();
@@ -203,6 +204,19 @@ const LocationTracking = () => {
                     <div className="text-xs text-muted-foreground">
                       Accuracy: {currentLocation.accuracy.toFixed(1)}m
                     </div>
+                    
+                    {/* Distance from current location */}
+                    {geolocation.latitude && geolocation.longitude && (
+                      <div className="text-xs flex items-center gap-1 mt-1 text-green-600 font-medium">
+                        <Ruler className="h-3 w-3" />
+                        Distance: {formatDistance(calculateDistance(
+                          geolocation.latitude,
+                          geolocation.longitude,
+                          currentLocation.latitude,
+                          currentLocation.longitude
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -260,31 +274,48 @@ const LocationTracking = () => {
                   </div>
                 ) : locations && locations.length > 0 ? (
                   <div className="space-y-4">
-                    {locations.map((location) => (
-                      <div key={location.id} className="border rounded-lg p-4 flex justify-between items-center">
-                        <div>
-                          <p className="font-medium">{location.contactName || 'Unknown'}</p>
-                          <p className="text-sm text-muted-foreground">{location.address || 'Unknown location'}</p>
-                          {countryInfo && (
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                              <span>{countryInfo.flag}</span>
-                              <span>{countryInfo.country}</span>
-                            </div>
-                          )}
+                    {locations.map((location) => {
+                      // Calculate distance if we have user's current location
+                      const distance = geolocation.latitude && geolocation.longitude ? 
+                        calculateDistance(
+                          geolocation.latitude,
+                          geolocation.longitude,
+                          location.latitude,
+                          location.longitude
+                        ) : null;
+                      
+                      return (
+                        <div key={location.id} className="border rounded-lg p-4 flex justify-between items-center">
+                          <div>
+                            <p className="font-medium">{location.contactName || 'Unknown'}</p>
+                            <p className="text-sm text-muted-foreground">{location.address || 'Unknown location'}</p>
+                            {countryInfo && (
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                                <span>{countryInfo.flag}</span>
+                                <span>{countryInfo.country}</span>
+                              </div>
+                            )}
+                            {distance !== null && (
+                              <div className="flex items-center gap-1 text-xs text-green-600 font-medium mt-1">
+                                <Ruler className="h-3 w-3" />
+                                Distance: {formatDistance(distance)}
+                              </div>
+                            )}
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm">
+                              {format(new Date(location.timestamp), 'MMM d, h:mm a')}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Lat: {location.latitude.toFixed(6)}, Long: {location.longitude.toFixed(6)}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Accuracy: {location.accuracy.toFixed(1)}m
+                            </p>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <p className="text-sm">
-                            {format(new Date(location.timestamp), 'MMM d, h:mm a')}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Lat: {location.latitude.toFixed(6)}, Long: {location.longitude.toFixed(6)}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Accuracy: {location.accuracy.toFixed(1)}m
-                          </p>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="text-center py-8">

@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -10,13 +9,14 @@ import { ActivityTimeline } from '@/components/dashboard/ActivityTimeline';
 import { CallHistoryList } from '@/components/dashboard/CallHistoryList';
 import { LocationMap } from '@/components/dashboard/LocationMap';
 import { AddPhoneDialog } from '@/components/dashboard/AddPhoneDialog';
-import { PhoneCall, MessageSquare, Map, Clock } from 'lucide-react';
+import { PhoneCall, MessageSquare, Map, Clock, Ruler } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { detectCountry } from '@/utils/phoneUtils';
 import { useGeolocation } from '@/hooks/useGeolocation';
+import { calculateDistance, formatDistance } from '@/utils/geoUtils';
 
 const Dashboard = () => {
   const { toast } = useToast();
@@ -214,6 +214,13 @@ const Dashboard = () => {
               Add Current Location
             </Button>
           )}
+          
+          {/* Display current location name if available */}
+          {geolocation.locationName && !geolocation.isLoading && (
+            <p className="text-sm text-center mt-1 text-muted-foreground">
+              Current location: {geolocation.locationName}
+            </p>
+          )}
         </div>
         
         {/* Main Content */}
@@ -257,7 +264,8 @@ const Dashboard = () => {
                 currentLocation={geolocation.latitude && geolocation.longitude ? {
                   latitude: geolocation.latitude,
                   longitude: geolocation.longitude,
-                  accuracy: geolocation.accuracy || 10
+                  accuracy: geolocation.accuracy || 10,
+                  locationName: geolocation.locationName
                 } : undefined}
               />
             )}

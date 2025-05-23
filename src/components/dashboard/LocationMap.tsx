@@ -4,7 +4,8 @@ import { useState, useEffect, useRef } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MapPin, Target, Navigation } from 'lucide-react';
+import { MapPin, Target, Navigation, Ruler } from 'lucide-react';
+import { calculateDistance, formatDistance } from '@/utils/geoUtils';
 
 interface CurrentLocationProps {
   latitude: number;
@@ -73,30 +74,48 @@ export const LocationMap = ({
               style={{ backgroundImage: 'url("https://api.mapbox.com/styles/v1/mapbox/streets-v11/static/-95.7129,37.0902,3/1200x400?access_token=pk.placeholder")', backgroundSize: 'cover', backgroundPosition: 'center' }}
             >
               {/* Tracked Phone Locations */}
-              {locations.slice(0, 10).map((location, index) => (
-                <div 
-                  key={location.id}
-                  className="absolute transform -translate-x-1/2 -translate-y-1/2 z-10"
-                  style={{
-                    // This is just a visual approximation, not actual geo mapping
-                    left: `${25 + (index * 8) % 60}%`,
-                    top: `${30 + (index * 6) % 50}%`,
-                  }}
-                >
-                  <div className="relative group">
-                    <div className="h-4 w-4 rounded-full bg-tracker-primary animate-pulse-soft" />
-                    <div className="absolute inset-0 rounded-full bg-tracker-primary/30 animate-ping" style={{ animationDuration: '3s' }} />
-                    
-                    <div className="opacity-0 group-hover:opacity-100 absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-white rounded shadow-md text-xs whitespace-nowrap transition-opacity z-20">
-                      <p>{location.contactName || 'Unknown'}</p>
-                      <p className="text-xs text-muted-foreground">{location.address}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Lat: {location.latitude.toFixed(6)}, Long: {location.longitude.toFixed(6)}
-                      </p>
+              {locations.slice(0, 10).map((location, index) => {
+                let distance = null;
+                if (currentLocation) {
+                  distance = calculateDistance(
+                    currentLocation.latitude,
+                    currentLocation.longitude,
+                    location.latitude,
+                    location.longitude
+                  );
+                }
+                
+                return (
+                  <div 
+                    key={location.id}
+                    className="absolute transform -translate-x-1/2 -translate-y-1/2 z-10"
+                    style={{
+                      // This is just a visual approximation, not actual geo mapping
+                      left: `${25 + (index * 8) % 60}%`,
+                      top: `${30 + (index * 6) % 50}%`,
+                    }}
+                  >
+                    <div className="relative group">
+                      <div className="h-4 w-4 rounded-full bg-tracker-primary animate-pulse-soft" />
+                      <div className="absolute inset-0 rounded-full bg-tracker-primary/30 animate-ping" style={{ animationDuration: '3s' }} />
+                      
+                      <div className="opacity-0 group-hover:opacity-100 absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-white rounded shadow-md text-xs whitespace-nowrap transition-opacity z-20">
+                        <p>{location.contactName || 'Unknown'}</p>
+                        <p className="text-xs text-muted-foreground">{location.address}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Lat: {location.latitude.toFixed(6)}, Long: {location.longitude.toFixed(6)}
+                        </p>
+                        {distance !== null && (
+                          <p className="text-xs font-medium flex items-center gap-1 mt-1">
+                            <Ruler className="h-3 w-3" />
+                            Distance: {formatDistance(distance)}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
               
               {/* User's Current Location (if available) */}
               {currentLocation && (
