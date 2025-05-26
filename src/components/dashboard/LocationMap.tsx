@@ -145,7 +145,6 @@ export const LocationMap = ({
               
               <ViewUpdater locations={locations} currentLocation={currentLocation} />
               
-              {/* Tracked phone locations */}
               {locations.slice(0, 10).map((location) => {
                 let distance = null;
                 if (currentLocation) {
@@ -182,7 +181,6 @@ export const LocationMap = ({
                 );
               })}
               
-              {/* Current location marker */}
               {currentLocation && (
                 <Marker 
                   position={[currentLocation.latitude, currentLocation.longitude]}
