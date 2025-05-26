@@ -52,19 +52,19 @@ interface LocationMapProps {
   currentLocation?: CurrentLocationProps; 
 }
 
-// Component to update map view when locations change
-const MapUpdater = ({ locations, currentLocation }: { locations: LocationData[], currentLocation?: CurrentLocationProps }) => {
-  const map = useMap();
+// Component to update view when locations change
+const ViewUpdater = ({ locations, currentLocation }: { locations: LocationData[], currentLocation?: CurrentLocationProps }) => {
+  const mapInstance = useMap();
   
   useEffect(() => {
     if (currentLocation) {
-      map.setView([currentLocation.latitude, currentLocation.longitude], 12);
+      mapInstance.setView([currentLocation.latitude, currentLocation.longitude], 12);
     } else if (locations.length > 0) {
-      map.setView([locations[0].latitude, locations[0].longitude], 10);
+      mapInstance.setView([locations[0].latitude, locations[0].longitude], 10);
     } else {
-      map.setView([37.7749, -122.4194], 3);
+      mapInstance.setView([37.7749, -122.4194], 3);
     }
-  }, [locations, currentLocation, map]);
+  }, [locations, currentLocation, mapInstance]);
   
   return null;
 };
@@ -76,11 +76,11 @@ export const LocationMap = ({
   onAddCurrentLocation,
   currentLocation
 }: LocationMapProps) => {
-  const [isMapLoaded, setIsMapLoaded] = useState(false);
+  const [isViewLoaded, setIsViewLoaded] = useState(false);
   
   useEffect(() => {
-    // Simulate map loading
-    const timer = setTimeout(() => setIsMapLoaded(true), 500);
+    // Simulate geographic view loading
+    const timer = setTimeout(() => setIsViewLoaded(true), 500);
     return () => clearTimeout(timer);
   }, []);
   
@@ -90,8 +90,8 @@ export const LocationMap = ({
     }
   };
 
-  // Calculate map center and zoom
-  const getMapCenter = (): [number, number] => {
+  // Calculate view center and zoom
+  const getViewCenter = (): [number, number] => {
     if (currentLocation) {
       return [currentLocation.latitude, currentLocation.longitude];
     } else if (locations.length > 0) {
@@ -101,7 +101,7 @@ export const LocationMap = ({
     }
   };
 
-  const getMapZoom = (): number => {
+  const getViewZoom = (): number => {
     if (currentLocation) {
       return 12;
     } else if (locations.length > 0) {
@@ -114,7 +114,7 @@ export const LocationMap = ({
   return (
     <Card className={className}>
       <CardHeader className="pb-0 flex flex-row items-center justify-between">
-        <CardTitle>Location Tracking</CardTitle>
+        <CardTitle>Geographic Location View</CardTitle>
         {onAddCurrentLocation && currentLocation && (
           <Button 
             size="sm" 
@@ -128,13 +128,13 @@ export const LocationMap = ({
         )}
       </CardHeader>
       <CardContent className="pt-4">
-        {!isMapLoaded ? (
+        {!isViewLoaded ? (
           <Skeleton className={`w-full rounded-md`} style={{ height }} />
         ) : (
           <div className="relative w-full rounded-md overflow-hidden" style={{ height }}>
             <MapContainer
-              center={getMapCenter()}
-              zoom={getMapZoom()}
+              center={getViewCenter()}
+              zoom={getViewZoom()}
               style={{ height: '100%', width: '100%' }}
               className="rounded-md"
             >
@@ -143,7 +143,7 @@ export const LocationMap = ({
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
               
-              <MapUpdater locations={locations} currentLocation={currentLocation} />
+              <ViewUpdater locations={locations} currentLocation={currentLocation} />
               
               {/* Tracked phone locations */}
               {locations.slice(0, 10).map((location) => {
