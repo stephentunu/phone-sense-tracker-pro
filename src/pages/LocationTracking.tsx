@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -143,6 +142,10 @@ const LocationTracking = () => {
   // Get country information
   const countryInfo = selectedPhoneNumber ? detectCountry(selectedPhoneNumber) : null;
   
+  // Get stats for the selected phone number
+  const selectedNumberStats = selectedPhoneNumber && trackedNumbers ? 
+    trackedNumbers.find(num => num.phoneNumber === selectedPhoneNumber) : null;
+  
   return (
     <AppLayout>
       <div className="flex justify-between items-center mb-6">
@@ -286,6 +289,9 @@ const LocationTracking = () => {
                   accuracy: geolocation.accuracy || 10,
                   locationName: geolocation.locationName
                 } : undefined}
+                callCount={selectedNumberStats?.callCount || 0}
+                textCount={selectedNumberStats?.textCount || 0}
+                selectedPhoneNumber={selectedPhoneNumber}
               />
             )}
           </div>

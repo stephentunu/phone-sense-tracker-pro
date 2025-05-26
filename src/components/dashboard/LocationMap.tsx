@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MapPin, Target, Navigation, Ruler } from 'lucide-react';
+import { MapPin, Target, Navigation, Ruler, Phone, MessageSquare } from 'lucide-react';
 import { calculateDistance, formatDistance } from '@/utils/geoUtils';
 
 interface CurrentLocationProps {
@@ -19,7 +19,10 @@ interface LocationMapProps {
   height?: string;
   className?: string;
   onAddCurrentLocation?: (coords: {latitude: number, longitude: number, accuracy: number}) => void;
-  currentLocation?: CurrentLocationProps; 
+  currentLocation?: CurrentLocationProps;
+  callCount?: number;
+  textCount?: number;
+  selectedPhoneNumber?: string | null;
 }
 
 export const LocationMap = ({ 
@@ -27,7 +30,10 @@ export const LocationMap = ({
   height = '400px', 
   className,
   onAddCurrentLocation,
-  currentLocation
+  currentLocation,
+  callCount = 0,
+  textCount = 0,
+  selectedPhoneNumber
 }: LocationMapProps) => {
   const [isViewLoaded, setIsViewLoaded] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<LocationData | null>(null);
@@ -87,6 +93,9 @@ export const LocationMap = ({
     
     return { x: relativeX, y: relativeY };
   };
+
+  // Get the most recent location for the tracked phone
+  const mostRecentLocation = locations.length > 0 ? locations[0] : null;
   
   return (
     <Card className={className}>
@@ -105,6 +114,56 @@ export const LocationMap = ({
         )}
       </CardHeader>
       <CardContent className="pt-4">
+        {/* Location Info Panel */}
+        {mostRecentLocation && (
+          <div className="mb-4 p-3 bg-muted/50 rounded-lg border">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <h4 className="font-medium flex items-center gap-2 text-red-600">
+                  <MapPin className="h-4 w-4" />
+                  Tracked Phone Location
+                </h4>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {mostRecentLocation.address || 'Unknown location'}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Contact: {mostRecentLocation.contactName || 'Unknown'}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Lat: {mostRecentLocation.latitude.toFixed(6)}, Long: {mostRecentLocation.longitude.toFixed(6)}
+                </p>
+                
+                {/* Distance from current location */}
+                {currentLocation && (
+                  <p className="text-sm font-medium flex items-center gap-1 mt-2 text-green-600">
+                    <Ruler className="h-3 w-3" />
+                    Distance from you: {formatDistance(calculateDistance(
+                      currentLocation.latitude,
+                      currentLocation.longitude,
+                      mostRecentLocation.latitude,
+                      mostRecentLocation.longitude
+                    ))}
+                  </p>
+                )}
+              </div>
+              
+              {/* Activity Stats */}
+              <div className="flex flex-col gap-2 ml-4">
+                <div className="flex items-center gap-1 text-xs">
+                  <Phone className="h-3 w-3 text-blue-500" />
+                  <span className="font-medium">{callCount}</span>
+                  <span className="text-muted-foreground">calls</span>
+                </div>
+                <div className="flex items-center gap-1 text-xs">
+                  <MessageSquare className="h-3 w-3 text-green-500" />
+                  <span className="font-medium">{textCount}</span>
+                  <span className="text-muted-foreground">texts</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {!isViewLoaded ? (
           <Skeleton className={`w-full rounded-md`} style={{ height }} />
         ) : (
@@ -146,20 +205,42 @@ export const LocationMap = ({
                     <MapPin className="h-3 w-3 text-white" />
                   </div>
                   
-                  {/* Tooltip */}
+                  {/* Enhanced Tooltip */}
                   {selectedLocation?.id === location.id && (
-                    <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 bg-white p-3 rounded-lg shadow-lg border min-w-48 z-10">
-                      <p className="font-medium text-sm">{location.contactName || 'Unknown'}</p>
-                      <p className="text-xs text-muted-foreground">{location.address}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Lat: {location.latitude.toFixed(6)}, Long: {location.longitude.toFixed(6)}
-                      </p>
-                      {distance !== null && (
-                        <p className="text-xs font-medium flex items-center gap-1 mt-1 text-green-600">
-                          <Ruler className="h-3 w-3" />
-                          Distance: {formatDistance(distance)}
+                    <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 bg-white p-4 rounded-lg shadow-lg border min-w-64 z-10">
+                      <div className="space-y-2">
+                        <p className="font-medium text-sm text-red-600 flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          {location.contactName || 'Unknown Contact'}
                         </p>
-                      )}
+                        <p className="text-sm font-medium">{location.address || 'Unknown location'}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Lat: {location.latitude.toFixed(6)}, Long: {location.longitude.toFixed(6)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Accuracy: {location.accuracy.toFixed(1)}m
+                        </p>
+                        {distance !== null && (
+                          <p className="text-xs font-medium flex items-center gap-1 text-green-600 bg-green-50 px-2 py-1 rounded">
+                            <Ruler className="h-3 w-3" />
+                            Distance from you: {formatDistance(distance)}
+                          </p>
+                        )}
+                        
+                        {/* Activity info in tooltip */}
+                        <div className="flex gap-4 pt-2 border-t">
+                          <div className="flex items-center gap-1 text-xs">
+                            <Phone className="h-3 w-3 text-blue-500" />
+                            <span className="font-medium">{callCount}</span>
+                            <span className="text-muted-foreground">calls</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-xs">
+                            <MessageSquare className="h-3 w-3 text-green-500" />
+                            <span className="font-medium">{textCount}</span>
+                            <span className="text-muted-foreground">texts</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -191,29 +272,62 @@ export const LocationMap = ({
             
             {/* Current Location Display */}
             {currentLocation && currentLocation.locationName && (
-              <div className="absolute top-2 left-2 bg-white/90 py-1 px-3 rounded-full shadow-md text-sm font-medium flex items-center gap-1.5 z-[1000]">
-                <MapPin className="h-3 w-3 text-blue-500" />
-                {currentLocation.locationName}
+              <div className="absolute top-2 left-2 bg-blue-500/90 text-white py-1 px-3 rounded-full shadow-md text-sm font-medium flex items-center gap-1.5 z-[1000]">
+                <MapPin className="h-3 w-3" />
+                Your Location: {currentLocation.locationName}
+              </div>
+            )}
+            
+            {/* Tracked Phone Location Display */}
+            {mostRecentLocation && (
+              <div className="absolute top-2 right-2 bg-red-500/90 text-white py-1 px-3 rounded-full shadow-md text-sm font-medium flex items-center gap-1.5 z-[1000]">
+                <MapPin className="h-3 w-3" />
+                Phone: {mostRecentLocation.address?.split(',')[0] || 'Unknown'}
               </div>
             )}
             
             {/* Navigation Compass */}
-            <div className="absolute top-2 right-2 bg-white p-2 rounded-full shadow-md z-[1000]">
+            <div className="absolute bottom-16 right-2 bg-white p-2 rounded-full shadow-md z-[1000]">
               <Navigation className="h-5 w-5 text-blue-500" />
             </div>
 
-            {/* Legend */}
-            <div className="absolute bottom-2 left-2 bg-white p-2 rounded shadow-md text-xs z-[1000]">
+            {/* Enhanced Legend */}
+            <div className="absolute bottom-2 left-2 bg-white p-3 rounded shadow-md text-xs z-[1000] min-w-48">
               <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-2">
-                  <div className="h-2 w-2 rounded-full bg-red-500" />
-                  <span>Tracked Phone</span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full bg-red-500" />
+                    <span>Tracked Phone</span>
+                  </div>
+                  {mostRecentLocation && currentLocation && (
+                    <span className="text-green-600 font-medium">
+                      {formatDistance(calculateDistance(
+                        currentLocation.latitude,
+                        currentLocation.longitude,
+                        mostRecentLocation.latitude,
+                        mostRecentLocation.longitude
+                      ))} away
+                    </span>
+                  )}
                 </div>
                 
                 <div className="flex items-center gap-2">
                   <div className="h-2 w-2 rounded-full bg-blue-500" />
                   <span>Your Current Location</span>
                 </div>
+                
+                {selectedPhoneNumber && (
+                  <div className="pt-2 border-t flex gap-4">
+                    <div className="flex items-center gap-1">
+                      <Phone className="h-3 w-3 text-blue-500" />
+                      <span>{callCount} calls</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <MessageSquare className="h-3 w-3 text-green-500" />
+                      <span>{textCount} texts</span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
