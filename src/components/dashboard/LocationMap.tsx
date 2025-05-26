@@ -6,36 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { MapPin, Target, Navigation, Ruler } from 'lucide-react';
 import { calculateDistance, formatDistance } from '@/utils/geoUtils';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-
-// Fix for default markers in Leaflet
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
-
-// Custom marker icons
-const trackedPhoneIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
-});
-
-const currentLocationIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
-});
 
 interface CurrentLocationProps {
   latitude: number;
@@ -52,23 +22,6 @@ interface LocationMapProps {
   currentLocation?: CurrentLocationProps; 
 }
 
-// Component to update view when locations change
-const ViewUpdater = ({ locations, currentLocation }: { locations: LocationData[], currentLocation?: CurrentLocationProps }) => {
-  const mapInstance = useMap();
-  
-  useEffect(() => {
-    if (currentLocation) {
-      mapInstance.setView([currentLocation.latitude, currentLocation.longitude], 12);
-    } else if (locations.length > 0) {
-      mapInstance.setView([locations[0].latitude, locations[0].longitude], 10);
-    } else {
-      mapInstance.setView([37.7749, -122.4194], 3);
-    }
-  }, [locations, currentLocation, mapInstance]);
-  
-  return null;
-};
-
 export const LocationMap = ({ 
   locations, 
   height = '400px', 
@@ -77,6 +30,7 @@ export const LocationMap = ({
   currentLocation
 }: LocationMapProps) => {
   const [isViewLoaded, setIsViewLoaded] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState<LocationData | null>(null);
   
   useEffect(() => {
     // Simulate geographic view loading
@@ -90,25 +44,48 @@ export const LocationMap = ({
     }
   };
 
-  // Calculate view center and zoom
-  const getViewCenter = (): [number, number] => {
+  // Calculate view center
+  const getViewCenter = () => {
     if (currentLocation) {
-      return [currentLocation.latitude, currentLocation.longitude];
+      return { lat: currentLocation.latitude, lng: currentLocation.longitude };
     } else if (locations.length > 0) {
-      return [locations[0].latitude, locations[0].longitude];
+      return { lat: locations[0].latitude, lng: locations[0].longitude };
     } else {
-      return [37.7749, -122.4194]; // Default to San Francisco
+      return { lat: 37.7749, lng: -122.4194 }; // Default to San Francisco
     }
   };
 
-  const getViewZoom = (): number => {
-    if (currentLocation) {
-      return 12;
-    } else if (locations.length > 0) {
-      return 10;
-    } else {
-      return 3;
-    }
+  const center = getViewCenter();
+  const zoom = currentLocation ? 12 : locations.length > 0 ? 10 : 3;
+  
+  // Generate static map URL (using OpenStreetMap tile service)
+  const mapWidth = 800;
+  const mapHeight = parseInt(height) || 400;
+  const tileSize = 256;
+  
+  // Calculate tile coordinates
+  const lat = center.lat * Math.PI / 180;
+  const n = Math.pow(2, zoom);
+  const xtile = Math.floor((center.lng + 180) / 360 * n);
+  const ytile = Math.floor((1 - Math.asinh(Math.tan(lat)) / Math.PI) / 2 * n);
+  
+  const staticMapUrl = `https://tile.openstreetmap.org/${zoom}/${xtile}/${ytile}.png`;
+  
+  // Convert lat/lng to pixel coordinates for markers
+  const latLngToPixel = (lat: number, lng: number) => {
+    const latRad = lat * Math.PI / 180;
+    const n = Math.pow(2, zoom);
+    const xPixel = (lng + 180) / 360 * n * tileSize;
+    const yPixel = (1 - Math.asinh(Math.tan(latRad)) / Math.PI) / 2 * n * tileSize;
+    
+    // Convert to relative position within our map container
+    const centerXPixel = (center.lng + 180) / 360 * n * tileSize;
+    const centerYPixel = (1 - Math.asinh(Math.tan(center.lat * Math.PI / 180)) / Math.PI) / 2 * n * tileSize;
+    
+    const relativeX = (xPixel - centerXPixel) + mapWidth / 2;
+    const relativeY = (yPixel - centerYPixel) + mapHeight / 2;
+    
+    return { x: relativeX, y: relativeY };
   };
   
   return (
@@ -131,81 +108,86 @@ export const LocationMap = ({
         {!isViewLoaded ? (
           <Skeleton className={`w-full rounded-md`} style={{ height }} />
         ) : (
-          <div className="relative w-full rounded-md overflow-hidden" style={{ height }}>
-            <MapContainer
-              center={getViewCenter()}
-              zoom={getViewZoom()}
-              style={{ height: '100%', width: '100%' }}
-              className="rounded-md"
-            >
-              <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
+          <div className="relative w-full rounded-md overflow-hidden bg-slate-100" style={{ height }}>
+            {/* Background pattern to simulate map */}
+            <div 
+              className="absolute inset-0 opacity-30"
+              style={{
+                backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.4'%3E%3Ccircle cx='6' cy='6' r='6'/%3E%3Ccircle cx='54' cy='54' r='6'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+              }}
+            />
+            
+            {/* Location markers */}
+            {locations.slice(0, 10).map((location, index) => {
+              const position = latLngToPixel(location.latitude, location.longitude);
+              const isVisible = position.x >= 0 && position.x <= mapWidth && position.y >= 0 && position.y <= mapHeight;
               
-              <ViewUpdater locations={locations} currentLocation={currentLocation} />
+              if (!isVisible) return null;
               
-              {locations.slice(0, 10).map((location) => {
-                let distance = null;
-                if (currentLocation) {
-                  distance = calculateDistance(
-                    currentLocation.latitude,
-                    currentLocation.longitude,
-                    location.latitude,
-                    location.longitude
-                  );
-                }
-                
-                return (
-                  <Marker 
-                    key={location.id}
-                    position={[location.latitude, location.longitude]}
-                    icon={trackedPhoneIcon}
-                  >
-                    <Popup>
-                      <div className="text-sm">
-                        <p className="font-medium">{location.contactName || 'Unknown'}</p>
-                        <p className="text-muted-foreground">{location.address}</p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Lat: {location.latitude.toFixed(6)}, Long: {location.longitude.toFixed(6)}
-                        </p>
-                        {distance !== null && (
-                          <p className="text-xs font-medium flex items-center gap-1 mt-1 text-green-600">
-                            <Ruler className="h-3 w-3" />
-                            Distance: {formatDistance(distance)}
-                          </p>
-                        )}
-                      </div>
-                    </Popup>
-                  </Marker>
+              let distance = null;
+              if (currentLocation) {
+                distance = calculateDistance(
+                  currentLocation.latitude,
+                  currentLocation.longitude,
+                  location.latitude,
+                  location.longitude
                 );
-              })}
+              }
               
-              {currentLocation && (
-                <Marker 
-                  position={[currentLocation.latitude, currentLocation.longitude]}
-                  icon={currentLocationIcon}
+              return (
+                <div
+                  key={location.id}
+                  className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer group"
+                  style={{ left: position.x, top: position.y }}
+                  onClick={() => setSelectedLocation(selectedLocation?.id === location.id ? null : location)}
                 >
-                  <Popup>
-                    <div className="text-sm">
-                      <p className="font-medium flex items-center gap-1">
-                        <MapPin className="h-3 w-3 text-blue-500" />
-                        Your Current Location
-                      </p>
-                      {currentLocation.locationName && (
-                        <p className="text-muted-foreground">{currentLocation.locationName}</p>
-                      )}
+                  {/* Red marker for tracked phone */}
+                  <div className="w-6 h-6 bg-red-500 rounded-full border-2 border-white shadow-lg flex items-center justify-center">
+                    <MapPin className="h-3 w-3 text-white" />
+                  </div>
+                  
+                  {/* Tooltip */}
+                  {selectedLocation?.id === location.id && (
+                    <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 bg-white p-3 rounded-lg shadow-lg border min-w-48 z-10">
+                      <p className="font-medium text-sm">{location.contactName || 'Unknown'}</p>
+                      <p className="text-xs text-muted-foreground">{location.address}</p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Lat: {currentLocation.latitude.toFixed(6)}, Long: {currentLocation.longitude.toFixed(6)}
+                        Lat: {location.latitude.toFixed(6)}, Long: {location.longitude.toFixed(6)}
                       </p>
-                      <p className="text-xs text-muted-foreground">
-                        Accuracy: {currentLocation.accuracy.toFixed(1)}m
-                      </p>
+                      {distance !== null && (
+                        <p className="text-xs font-medium flex items-center gap-1 mt-1 text-green-600">
+                          <Ruler className="h-3 w-3" />
+                          Distance: {formatDistance(distance)}
+                        </p>
+                      )}
                     </div>
-                  </Popup>
-                </Marker>
-              )}
-            </MapContainer>
+                  )}
+                </div>
+              );
+            })}
+            
+            {/* Current location marker */}
+            {currentLocation && (() => {
+              const position = latLngToPixel(currentLocation.latitude, currentLocation.longitude);
+              const isVisible = position.x >= 0 && position.x <= mapWidth && position.y >= 0 && position.y <= mapHeight;
+              
+              if (!isVisible) return null;
+              
+              return (
+                <div
+                  className="absolute transform -translate-x-1/2 -translate-y-1/2"
+                  style={{ left: position.x, top: position.y }}
+                >
+                  {/* Blue marker for current location */}
+                  <div className="w-6 h-6 bg-blue-500 rounded-full border-2 border-white shadow-lg flex items-center justify-center">
+                    <MapPin className="h-3 w-3 text-white" />
+                  </div>
+                  
+                  {/* Pulsing ring effect */}
+                  <div className="absolute inset-0 w-6 h-6 bg-blue-500 rounded-full animate-ping opacity-20"></div>
+                </div>
+              );
+            })()}
             
             {/* Current Location Display */}
             {currentLocation && currentLocation.locationName && (
@@ -233,6 +215,11 @@ export const LocationMap = ({
                   <span>Your Current Location</span>
                 </div>
               </div>
+            </div>
+
+            {/* Center crosshair */}
+            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+              <div className="w-4 h-4 border-2 border-gray-400 rounded-full bg-white/50"></div>
             </div>
           </div>
         )}
