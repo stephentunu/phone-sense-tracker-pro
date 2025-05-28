@@ -91,27 +91,77 @@ const generateMockLocations = (): LocationData[] => {
   const locations: LocationData[] = [];
   const contacts = generateMockContacts();
   
-  // US cities with coordinates
-  const cities = [
-    { name: 'New York', lat: 40.7128, lng: -74.0060 },
-    { name: 'Los Angeles', lat: 34.0522, lng: -118.2437 },
-    { name: 'Chicago', lat: 41.8781, lng: -87.6298 },
-    { name: 'Houston', lat: 29.7604, lng: -95.3698 },
-    { name: 'Phoenix', lat: 33.4484, lng: -112.0740 },
-    { name: 'Philadelphia', lat: 39.9526, lng: -75.1652 },
-    { name: 'San Antonio', lat: 29.4241, lng: -98.4936 },
-    { name: 'San Diego', lat: 32.7157, lng: -117.1611 },
-    { name: 'Dallas', lat: 32.7767, lng: -96.7970 },
-    { name: 'San Jose', lat: 37.3382, lng: -121.8863 },
+  // Enhanced real-world locations with detailed addresses
+  const realLocations = [
+    { 
+      name: 'Times Square, New York', 
+      lat: 40.7580, 
+      lng: -73.9855,
+      address: 'Times Square, Manhattan, New York, NY 10036, USA'
+    },
+    { 
+      name: 'Hollywood Boulevard, Los Angeles', 
+      lat: 34.1022, 
+      lng: -118.3406,
+      address: '6801 Hollywood Blvd, Hollywood, CA 90028, USA'
+    },
+    { 
+      name: 'Navy Pier, Chicago', 
+      lat: 41.8919, 
+      lng: -87.6051,
+      address: '600 E Grand Ave, Chicago, IL 60611, USA'
+    },
+    { 
+      name: 'Space Center Houston', 
+      lat: 29.5518, 
+      lng: -95.0830,
+      address: '1601 E NASA Pkwy, Houston, TX 77058, USA'
+    },
+    { 
+      name: 'Desert Botanical Garden, Phoenix', 
+      lat: 33.4619, 
+      lng: -111.9451,
+      address: '1201 N Galvin Pkwy, Phoenix, AZ 85008, USA'
+    },
+    { 
+      name: 'Liberty Bell, Philadelphia', 
+      lat: 39.9496, 
+      lng: -75.1503,
+      address: '526 Market St, Philadelphia, PA 19106, USA'
+    },
+    { 
+      name: 'River Walk, San Antonio', 
+      lat: 29.4246, 
+      lng: -98.4951,
+      address: 'San Antonio River Walk, San Antonio, TX 78205, USA'
+    },
+    { 
+      name: 'Balboa Park, San Diego', 
+      lat: 32.7341, 
+      lng: -117.1443,
+      address: '1549 El Prado, San Diego, CA 92101, USA'
+    },
+    { 
+      name: 'Downtown Dallas', 
+      lat: 32.7834, 
+      lng: -96.8067,
+      address: 'Main Street District, Dallas, TX 75201, USA'
+    },
+    { 
+      name: 'Santana Row, San Jose', 
+      lat: 37.3197, 
+      lng: -121.9474,
+      address: '377 Santana Row, San Jose, CA 95128, USA'
+    },
   ];
   
-  for (let i = 0; i < 30; i++) {
+  for (let i = 0; i < 15; i++) {
     const contact = contacts[Math.floor(Math.random() * 4)]; // Use only the first 4 contacts
-    const city = cities[Math.floor(Math.random() * cities.length)];
+    const location = realLocations[Math.floor(Math.random() * realLocations.length)];
     
-    // Add small random variations to the city coordinates
-    const latVariation = (Math.random() - 0.5) * 0.1;
-    const lngVariation = (Math.random() - 0.5) * 0.1;
+    // Add small random variations to coordinates for realistic tracking
+    const latVariation = (Math.random() - 0.5) * 0.002; // ~200m variation
+    const lngVariation = (Math.random() - 0.5) * 0.002;
     
     const daysAgo = Math.floor(Math.random() * 7);
     const hoursAgo = Math.floor(Math.random() * 24);
@@ -121,11 +171,11 @@ const generateMockLocations = (): LocationData[] => {
       id: `location-${i}`,
       phoneNumber: contact.phoneNumber,
       contactName: contact.isSaved ? contact.name : undefined,
-      latitude: city.lat + latVariation,
-      longitude: city.lng + lngVariation,
-      accuracy: Math.random() * 50 + 10, // 10-60 meters accuracy
+      latitude: location.lat + latVariation,
+      longitude: location.lng + lngVariation,
+      accuracy: Math.random() * 30 + 5, // 5-35 meters accuracy
       timestamp,
-      address: `${Math.floor(Math.random() * 1000) + 1} ${['Main', 'Oak', 'Maple', 'Pine', 'Cedar'][Math.floor(Math.random() * 5)]} ${['St', 'Ave', 'Blvd', 'Dr'][Math.floor(Math.random() * 4)]}, ${city.name}`,
+      address: location.address,
     });
   }
   
