@@ -1,3 +1,4 @@
+
 import { format, subDays, subHours } from 'date-fns';
 
 // Types
@@ -48,6 +49,96 @@ export interface TrackedNumber {
   callCount: number;
   textCount: number;
 }
+
+// Kenyan locations for realistic data
+const kenyanLocations = [
+  { name: 'Nairobi CBD', lat: -1.2921, lng: 36.8219, address: 'Central Business District, Nairobi, Kenya' },
+  { name: 'Westlands', lat: -1.2676, lng: 36.8108, address: 'Westlands, Nairobi, Kenya' },
+  { name: 'Karen', lat: -1.3197, lng: 36.7085, address: 'Karen, Nairobi, Kenya' },
+  { name: 'Mombasa', lat: -4.0435, lng: 39.6682, address: 'Mombasa, Coast Province, Kenya' },
+  { name: 'Kisumu', lat: -0.0917, lng: 34.7680, address: 'Kisumu, Nyanza Province, Kenya' },
+  { name: 'Nakuru', lat: -0.3031, lng: 36.0800, address: 'Nakuru, Rift Valley Province, Kenya' },
+  { name: 'Eldoret', lat: 0.5143, lng: 35.2697, address: 'Eldoret, Rift Valley Province, Kenya' },
+  { name: 'Thika', lat: -1.0332, lng: 37.0692, address: 'Thika, Central Province, Kenya' },
+  { name: 'Ongata Rongai', lat: -1.3956, lng: 36.7716, address: 'Ongata Rongai, Kajiado County, Kenya' },
+  { name: 'Kiambu', lat: -1.1714, lng: 36.8356, address: 'Kiambu, Central Province, Kenya' },
+];
+
+// Generate realistic data for any phone number
+const generateDataForPhone = (phoneNumber: string) => {
+  // Create a consistent seed based on phone number for reproducible data
+  const seed = phoneNumber.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const random = (max: number) => (seed * 9301 + 49297) % max;
+  
+  const isKenyan = phoneNumber.startsWith('+254') || phoneNumber.startsWith('254') || phoneNumber.startsWith('07') || phoneNumber.startsWith('01');
+  const locations = isKenyan ? kenyanLocations : [
+    { name: 'New York', lat: 40.7128, lng: -74.0060, address: 'New York, NY, USA' },
+    { name: 'London', lat: 51.5074, lng: -0.1278, address: 'London, UK' },
+    { name: 'Sydney', lat: -33.8688, lng: 151.2093, address: 'Sydney, Australia' },
+  ];
+  
+  return {
+    callCount: 15 + (random(100) % 50),
+    textCount: 25 + (random(100) % 100),
+    locations: locations.slice(0, 3 + (random(100) % 3)),
+    isActive: random(100) % 10 !== 0, // 90% chance of being active
+  };
+};
+
+// Generate location history for a phone number
+const generateLocationsForPhone = (phoneNumber: string): LocationData[] => {
+  const data = generateDataForPhone(phoneNumber);
+  const locations: LocationData[] = [];
+  
+  data.locations.forEach((location, index) => {
+    // Add small variations to coordinates for realistic tracking
+    const latVariation = ((phoneNumber.charCodeAt(index) % 20) - 10) * 0.001; // ~100m variation
+    const lngVariation = ((phoneNumber.charCodeAt(index + 1) % 20) - 10) * 0.001;
+    
+    const hoursAgo = index * 2 + 1; // Recent locations first
+    const timestamp = format(subHours(new Date(), hoursAgo), "yyyy-MM-dd'T'HH:mm:ss");
+    
+    locations.push({
+      id: `location-${phoneNumber}-${index}`,
+      phoneNumber,
+      contactName: undefined, // Will be set based on contacts
+      latitude: location.lat + latVariation,
+      longitude: location.lng + lngVariation,
+      accuracy: 5 + ((phoneNumber.charCodeAt(index) % 25)),
+      timestamp,
+      address: location.address,
+    });
+  });
+  
+  return locations.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+};
+
+// Generate call history for a phone number
+const generateCallsForPhone = (phoneNumber: string): CallRecord[] => {
+  const data = generateDataForPhone(phoneNumber);
+  const calls: CallRecord[] = [];
+  
+  for (let i = 0; i < data.callCount; i++) {
+    const types: ('incoming' | 'outgoing' | 'missed')[] = ['incoming', 'outgoing', 'missed'];
+    const type = types[(phoneNumber.charCodeAt(i) % 3)];
+    const duration = type === 'missed' ? 0 : 30 + ((phoneNumber.charCodeAt(i) % 300));
+    
+    const daysAgo = Math.floor(i / 10); // Spread calls over days
+    const hoursAgo = (phoneNumber.charCodeAt(i) % 24);
+    const timestamp = format(subHours(subDays(new Date(), daysAgo), hoursAgo), "yyyy-MM-dd'T'HH:mm:ss");
+    
+    calls.push({
+      id: `call-${phoneNumber}-${i}`,
+      phoneNumber,
+      contactName: undefined, // Will be set based on contacts
+      duration,
+      timestamp,
+      type,
+    });
+  }
+  
+  return calls.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+};
 
 // Mock data
 const generateMockContacts = (): PhoneContact[] => [
@@ -260,16 +351,26 @@ export const api = {
   }),
   
   addTrackedNumber: (phoneNumber: string, label: string) => new Promise<TrackedNumber>((resolve) => {
+    const data = generateDataForPhone(phoneNumber);
+    
     const newTrackedNumber: TrackedNumber = {
       phoneNumber,
       label,
-      isActive: true,
+      isActive: data.isActive,
       lastSeen: format(new Date(), "yyyy-MM-dd'T'HH:mm:ss"),
-      callCount: 0,
-      textCount: 0,
+      callCount: data.callCount,
+      textCount: data.textCount,
     };
     
     trackedNumbers = [...trackedNumbers, newTrackedNumber];
+    
+    // Generate location and call data for this phone number
+    const phoneLocations = generateLocationsForPhone(phoneNumber);
+    const phoneCalls = generateCallsForPhone(phoneNumber);
+    
+    // Add to global arrays
+    locations = [...phoneLocations, ...locations];
+    calls = [...phoneCalls, ...calls];
     
     setTimeout(() => resolve(newTrackedNumber), 500);
   }),
@@ -295,23 +396,73 @@ export const api = {
     setTimeout(() => resolve(newContact), 500);
   }),
   
-  // Call records
+  // Call records - Enhanced to include generated data
   getCalls: () => new Promise<CallRecord[]>((resolve) => {
-    setTimeout(() => resolve(calls), 500);
+    // Update contact names for calls
+    const updatedCalls = calls.map(call => {
+      const contact = contacts.find(c => c.phoneNumber === call.phoneNumber);
+      return {
+        ...call,
+        contactName: contact?.isSaved ? contact.name : undefined
+      };
+    });
+    setTimeout(() => resolve(updatedCalls), 500);
   }),
   
   getCallsByNumber: (phoneNumber: string) => new Promise<CallRecord[]>((resolve) => {
-    const filteredCalls = calls.filter((call) => call.phoneNumber === phoneNumber);
+    let filteredCalls = calls.filter((call) => call.phoneNumber === phoneNumber);
+    
+    // If no calls found and it's a tracked number, generate some
+    if (filteredCalls.length === 0 && trackedNumbers.some(t => t.phoneNumber === phoneNumber)) {
+      const generatedCalls = generateCallsForPhone(phoneNumber);
+      calls = [...generatedCalls, ...calls];
+      filteredCalls = generatedCalls;
+    }
+    
+    // Update contact names
+    filteredCalls = filteredCalls.map(call => {
+      const contact = contacts.find(c => c.phoneNumber === call.phoneNumber);
+      return {
+        ...call,
+        contactName: contact?.isSaved ? contact.name : undefined
+      };
+    });
+    
     setTimeout(() => resolve(filteredCalls), 300);
   }),
   
-  // Location data
+  // Location data - Enhanced to include generated data
   getLocations: () => new Promise<LocationData[]>((resolve) => {
-    setTimeout(() => resolve(locations), 500);
+    // Update contact names for locations
+    const updatedLocations = locations.map(location => {
+      const contact = contacts.find(c => c.phoneNumber === location.phoneNumber);
+      return {
+        ...location,
+        contactName: contact?.isSaved ? contact.name : undefined
+      };
+    });
+    setTimeout(() => resolve(updatedLocations), 500);
   }),
   
   getLocationsByNumber: (phoneNumber: string) => new Promise<LocationData[]>((resolve) => {
-    const filteredLocations = locations.filter((location) => location.phoneNumber === phoneNumber);
+    let filteredLocations = locations.filter((location) => location.phoneNumber === phoneNumber);
+    
+    // If no locations found and it's a tracked number, generate some
+    if (filteredLocations.length === 0 && trackedNumbers.some(t => t.phoneNumber === phoneNumber)) {
+      const generatedLocations = generateLocationsForPhone(phoneNumber);
+      locations = [...generatedLocations, ...locations];
+      filteredLocations = generatedLocations;
+    }
+    
+    // Update contact names
+    filteredLocations = filteredLocations.map(location => {
+      const contact = contacts.find(c => c.phoneNumber === location.phoneNumber);
+      return {
+        ...location,
+        contactName: contact?.isSaved ? contact.name : undefined
+      };
+    });
+    
     setTimeout(() => resolve(filteredLocations), 300);
   }),
   
@@ -329,7 +480,7 @@ export const api = {
         longitude,
         accuracy,
         timestamp: format(new Date(), "yyyy-MM-dd'T'HH:mm:ss"),
-        address: locationName || "Current Location", // Use the provided location name
+        address: locationName || "Current Location",
       };
       
       // Update tracked number's last seen

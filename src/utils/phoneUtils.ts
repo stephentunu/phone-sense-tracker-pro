@@ -7,6 +7,7 @@ interface CountryCode {
 
 // List of country codes with their respective countries and flags
 export const countryCodes: CountryCode[] = [
+  { code: '+254', country: 'Kenya', flag: '🇰🇪' },
   { code: '+1', country: 'United States/Canada', flag: '🇺🇸/🇨🇦' },
   { code: '+44', country: 'United Kingdom', flag: '🇬🇧' },
   { code: '+49', country: 'Germany', flag: '🇩🇪' },
@@ -36,7 +37,6 @@ export const countryCodes: CountryCode[] = [
   { code: '+971', country: 'United Arab Emirates', flag: '🇦🇪' },
   { code: '+966', country: 'Saudi Arabia', flag: '🇸🇦' },
   { code: '+234', country: 'Nigeria', flag: '🇳🇬' },
-  { code: '+254', country: 'Kenya', flag: '🇰🇪' },
   { code: '+62', country: 'Indonesia', flag: '🇮🇩' },
   { code: '+84', country: 'Vietnam', flag: '🇻🇳' },
   { code: '+60', country: 'Malaysia', flag: '🇲🇾' },
@@ -46,6 +46,33 @@ export const countryCodes: CountryCode[] = [
 ];
 
 /**
+ * Normalizes Kenyan phone numbers to international format
+ */
+export const normalizeKenyanNumber = (phoneNumber: string): string => {
+  // Remove all non-digit characters first
+  let cleaned = phoneNumber.replace(/\D/g, '');
+  
+  // Handle different Kenyan number formats
+  if (cleaned.startsWith('254')) {
+    // Already in international format without +
+    return `+${cleaned}`;
+  } else if (cleaned.startsWith('0')) {
+    // Local format (07xxxxxxxx or 01xxxxxxxx)
+    return `+254${cleaned.substring(1)}`;
+  } else if (cleaned.length === 9 && (cleaned.startsWith('7') || cleaned.startsWith('1'))) {
+    // 9 digits starting with 7 or 1 (missing leading 0)
+    return `+254${cleaned}`;
+  }
+  
+  // If it doesn't match Kenyan patterns, return with + if it looks international
+  if (cleaned.length > 10) {
+    return `+${cleaned}`;
+  }
+  
+  return phoneNumber; // Return original if we can't normalize
+};
+
+/**
  * Detects country based on phone number prefix
  * @param phoneNumber Phone number to analyze
  * @returns Country information or undefined if not detected
@@ -53,8 +80,11 @@ export const countryCodes: CountryCode[] = [
 export const detectCountry = (phoneNumber: string): CountryCode | undefined => {
   if (!phoneNumber) return undefined;
   
+  // Normalize the phone number first
+  const normalizedNumber = normalizeKenyanNumber(phoneNumber);
+  
   // Clean the phone number - remove spaces, dashes, parentheses, etc.
-  const cleanedNumber = phoneNumber.replace(/[\s\-\(\)\.]/g, '');
+  const cleanedNumber = normalizedNumber.replace(/[\s\-\(\)\.]/g, '');
   
   // Sort country codes by length (longest first) to match most specific code
   const sortedCodes = [...countryCodes].sort((a, b) => b.code.length - a.code.length);
@@ -69,10 +99,11 @@ export const detectCountry = (phoneNumber: string): CountryCode | undefined => {
  * Format phone number with country information
  */
 export const formatPhoneWithCountry = (phoneNumber: string): string => {
-  const country = detectCountry(phoneNumber);
+  const normalizedNumber = normalizeKenyanNumber(phoneNumber);
+  const country = detectCountry(normalizedNumber);
   if (!country) return phoneNumber;
   
-  return `${phoneNumber} ${country.flag} (${country.country})`;
+  return `${normalizedNumber} ${country.flag} (${country.country})`;
 };
 
 /**
@@ -81,8 +112,16 @@ export const formatPhoneWithCountry = (phoneNumber: string): string => {
 export const formatPhoneNumber = (phoneNumber: string): string => {
   if (!phoneNumber) return '';
   
+  // Normalize first for Kenyan numbers
+  const normalizedNumber = normalizeKenyanNumber(phoneNumber);
+  
   // Clean the phone number
-  const cleaned = phoneNumber.replace(/\D/g, '');
+  const cleaned = normalizedNumber.replace(/\D/g, '');
+  
+  // Handle Kenyan numbers specifically
+  if (cleaned.startsWith('254')) {
+    return `+254 ${cleaned.substring(3, 6)} ${cleaned.substring(6, 9)} ${cleaned.substring(9, 12)}`;
+  }
   
   // Check if it's likely a US/Canada number (length 10 or 11 with country code)
   if (cleaned.length === 10) {
@@ -92,7 +131,7 @@ export const formatPhoneNumber = (phoneNumber: string): string => {
   }
   
   // For international numbers, try to format with the country code
-  const country = detectCountry(phoneNumber);
+  const country = detectCountry(normalizedNumber);
   if (country) {
     const codeLength = country.code.length - 1; // -1 for the + symbol
     const nationalNumber = cleaned.substring(codeLength);
@@ -108,5 +147,5 @@ export const formatPhoneNumber = (phoneNumber: string): string => {
   }
   
   // Default formatting for unknown patterns
-  return phoneNumber;
+  return normalizedNumber;
 };
