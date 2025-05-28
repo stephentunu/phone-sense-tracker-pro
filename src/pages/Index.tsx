@@ -46,24 +46,26 @@ const Dashboard = () => {
   const { 
     data: activities,
     isLoading: isLoadingActivities,
+    refetch: refetchActivities
   } = useQuery({
     queryKey: ['activities', selectedPhoneNumber],
     queryFn: () => selectedPhoneNumber 
       ? api.getActivitiesByNumber(selectedPhoneNumber)
       : api.getActivities(),
-    enabled: !!selectedPhoneNumber || trackedNumbers?.length === 0
+    enabled: !!selectedPhoneNumber || (trackedNumbers?.length === 0)
   });
   
   // Fetch calls
   const { 
     data: calls,
     isLoading: isLoadingCalls,
+    refetch: refetchCalls
   } = useQuery({
     queryKey: ['calls', selectedPhoneNumber],
     queryFn: () => selectedPhoneNumber 
       ? api.getCallsByNumber(selectedPhoneNumber)
       : api.getCalls(),
-    enabled: !!selectedPhoneNumber || trackedNumbers?.length === 0
+    enabled: !!selectedPhoneNumber || (trackedNumbers?.length === 0)
   });
   
   // Fetch locations
@@ -76,7 +78,7 @@ const Dashboard = () => {
     queryFn: () => selectedPhoneNumber 
       ? api.getLocationsByNumber(selectedPhoneNumber)
       : api.getLocations(),
-    enabled: !!selectedPhoneNumber || trackedNumbers?.length === 0
+    enabled: !!selectedPhoneNumber || (trackedNumbers?.length === 0)
   });
   
   // Set the first tracked number as selected by default
@@ -84,12 +86,22 @@ const Dashboard = () => {
     if (filteredTrackedNumbers?.length && !selectedPhoneNumber) {
       setSelectedPhoneNumber(filteredTrackedNumbers[0].phoneNumber);
     } else if (filteredTrackedNumbers?.length === 0) {
-      // Clear selection if no phones match the search
       setSelectedPhoneNumber(null);
     }
   }, [filteredTrackedNumbers, selectedPhoneNumber]);
   
+  // Refetch all data when selected phone number changes
+  useEffect(() => {
+    if (selectedPhoneNumber) {
+      console.log(`Selected phone number changed to: ${selectedPhoneNumber}`);
+      refetchActivities();
+      refetchCalls();
+      refetchLocations();
+    }
+  }, [selectedPhoneNumber, refetchActivities, refetchCalls, refetchLocations]);
+  
   const handleTrackedNumberClick = (phoneNumber: string) => {
+    console.log(`Clicked on phone number: ${phoneNumber}`);
     setSelectedPhoneNumber(phoneNumber);
     toast({
       title: "Phone Selected",
@@ -97,12 +109,25 @@ const Dashboard = () => {
     });
   };
   
-  const handleAddPhoneSuccess = (phoneNumber: string) => {
-    refetchTrackedNumbers();
+  const handleAddPhoneSuccess = async (phoneNumber: string) => {
+    console.log(`Successfully added phone number: ${phoneNumber}`);
+    
+    // Refetch tracked numbers first
+    await refetchTrackedNumbers();
+    
+    // Set the new phone as selected
     setSelectedPhoneNumber(phoneNumber);
+    
+    // Small delay to ensure data is generated
+    setTimeout(() => {
+      refetchActivities();
+      refetchCalls();
+      refetchLocations();
+    }, 200);
+    
     toast({
       title: "Success",
-      description: "Phone number added and ready for tracking",
+      description: `Phone number ${phoneNumber} added and ready for tracking`,
     });
   };
   
@@ -260,6 +285,14 @@ const Dashboard = () => {
         
         {/* Main Content */}
         <div className="md:col-span-9 space-y-6">
+          {/* Debug Info - Remove this in production */}
+          {selectedPhoneNumber && (
+            <div className="bg-blue-50 border border-blue-200 p-3 rounded text-sm">
+              <p><strong>Debug:</strong> Selected Phone: {selectedPhoneNumber}</p>
+              <p>Locations: {locations?.length || 0}, Calls: {calls?.length || 0}, Activities: {activities?.length || 0}</p>
+            </div>
+          )}
+          
           {/* Stats Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatsCard
