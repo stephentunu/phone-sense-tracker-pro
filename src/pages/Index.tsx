@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { api, ActivityLog, CallRecord, LocationData, TrackedNumber } from '@/lib/api';
+import { supabaseApi, ActivityLog, CallRecord, LocationData, TrackedNumber } from '@/lib/supabaseApi';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TrackedNumberCard } from '@/components/dashboard/TrackedNumberCard';
 import { StatsCard } from '@/components/dashboard/StatsCard';
@@ -17,10 +17,11 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { detectCountry } from '@/utils/phoneUtils';
 import { useGeolocation } from '@/hooks/useGeolocation';
-import { calculateDistance, formatDistance } from '@/utils/geoUtils';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Dashboard = () => {
   const { toast } = useToast();
+  const { user, signOut } = useAuth();
   const isMobile = useIsMobile();
   const [selectedPhoneNumber, setSelectedPhoneNumber] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -33,7 +34,7 @@ const Dashboard = () => {
     refetch: refetchTrackedNumbers
   } = useQuery({
     queryKey: ['trackedNumbers'],
-    queryFn: api.getTrackedNumbers,
+    queryFn: supabaseApi.getTrackedNumbers,
   });
   
   // Filter tracked numbers based on search query
@@ -50,8 +51,8 @@ const Dashboard = () => {
   } = useQuery({
     queryKey: ['activities', selectedPhoneNumber],
     queryFn: () => selectedPhoneNumber 
-      ? api.getActivitiesByNumber(selectedPhoneNumber)
-      : api.getActivities(),
+      ? supabaseApi.getActivitiesByNumber(selectedPhoneNumber)
+      : supabaseApi.getActivities(),
     enabled: !!selectedPhoneNumber || (trackedNumbers?.length === 0)
   });
   
@@ -63,8 +64,8 @@ const Dashboard = () => {
   } = useQuery({
     queryKey: ['calls', selectedPhoneNumber],
     queryFn: () => selectedPhoneNumber 
-      ? api.getCallsByNumber(selectedPhoneNumber)
-      : api.getCalls(),
+      ? supabaseApi.getCallsByNumber(selectedPhoneNumber)
+      : supabaseApi.getCalls(),
     enabled: !!selectedPhoneNumber || (trackedNumbers?.length === 0)
   });
   
@@ -76,8 +77,8 @@ const Dashboard = () => {
   } = useQuery({
     queryKey: ['locations', selectedPhoneNumber],
     queryFn: () => selectedPhoneNumber 
-      ? api.getLocationsByNumber(selectedPhoneNumber)
-      : api.getLocations(),
+      ? supabaseApi.getLocationsByNumber(selectedPhoneNumber)
+      : supabaseApi.getLocations(),
     enabled: !!selectedPhoneNumber || (trackedNumbers?.length === 0)
   });
   
@@ -112,13 +113,9 @@ const Dashboard = () => {
   const handleAddPhoneSuccess = async (phoneNumber: string) => {
     console.log(`Successfully added phone number: ${phoneNumber}`);
     
-    // Refetch tracked numbers first
     await refetchTrackedNumbers();
-    
-    // Set the new phone as selected
     setSelectedPhoneNumber(phoneNumber);
     
-    // Small delay to ensure data is generated
     setTimeout(() => {
       refetchActivities();
       refetchCalls();
@@ -142,11 +139,12 @@ const Dashboard = () => {
     }
     
     try {
-      await api.addLocation(
+      await supabaseApi.addLocation(
         selectedPhoneNumber,
         coords.latitude,
         coords.longitude,
-        coords.accuracy
+        coords.accuracy,
+        geolocation.locationName || "Current Location"
       );
       
       refetchLocations();
@@ -202,8 +200,14 @@ const Dashboard = () => {
   return (
     <AppLayout>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Phone Tracking Dashboard</h1>
-        <AddPhoneDialog onSuccess={handleAddPhoneSuccess} />
+        <div>
+          <h1 className="text-3xl font-bold">Phone Tracking Dashboard</h1>
+          <p className="text-muted-foreground">Welcome back, {user?.email}</p>
+        </div>
+        <div className="flex gap-2">
+          <AddPhoneDialog onSuccess={handleAddPhoneSuccess} />
+          <Button variant="outline" onClick={signOut}>Sign Out</Button>
+        </div>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
@@ -275,7 +279,6 @@ const Dashboard = () => {
             </Button>
           )}
           
-          {/* Display current location name if available */}
           {geolocation.locationName && !geolocation.isLoading && (
             <p className="text-sm text-center mt-1 text-muted-foreground">
               Current location: {geolocation.locationName}
@@ -285,14 +288,6 @@ const Dashboard = () => {
         
         {/* Main Content */}
         <div className="md:col-span-9 space-y-6">
-          {/* Debug Info - Remove this in production */}
-          {selectedPhoneNumber && (
-            <div className="bg-blue-50 border border-blue-200 p-3 rounded text-sm">
-              <p><strong>Debug:</strong> Selected Phone: {selectedPhoneNumber}</p>
-              <p>Locations: {locations?.length || 0}, Calls: {calls?.length || 0}, Activities: {activities?.length || 0}</p>
-            </div>
-          )}
-          
           {/* Stats Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatsCard
