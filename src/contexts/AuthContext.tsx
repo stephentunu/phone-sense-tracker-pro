@@ -29,6 +29,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Check if Supabase is properly configured
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    
+    if (!supabaseUrl || !supabaseKey || supabaseUrl === 'https://placeholder.supabase.co') {
+      console.log('Supabase not configured, using demo mode');
+      // Create a demo user for development
+      const demoUser = {
+        id: 'demo-user',
+        email: 'demo@example.com',
+        app_metadata: {},
+        user_metadata: { full_name: 'Demo User' },
+        aud: 'authenticated',
+        created_at: new Date().toISOString(),
+      } as User;
+      
+      setUser(demoUser);
+      setLoading(false);
+      return;
+    }
+
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);

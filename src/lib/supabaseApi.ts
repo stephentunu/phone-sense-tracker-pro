@@ -1,4 +1,3 @@
-
 import { supabase } from './supabase';
 import { format } from 'date-fns';
 
@@ -52,14 +51,135 @@ export interface ActivityLog {
 }
 
 const getCurrentUser = async () => {
+  // Check if we're in demo mode
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  if (!supabaseUrl || supabaseUrl === 'https://placeholder.supabase.co') {
+    return { id: 'demo-user', email: 'demo@example.com' };
+  }
+  
   const { data: { user }, error } = await supabase.auth.getUser();
   if (error || !user) throw new Error('User not authenticated');
   return user;
 };
 
+// Demo data for development
+const demoTrackedNumbers: TrackedNumber[] = [
+  {
+    phoneNumber: '+1234567890',
+    label: 'John\'s iPhone',
+    isActive: true,
+    lastSeen: format(new Date(Date.now() - 1000 * 60 * 30), "yyyy-MM-dd'T'HH:mm:ss"),
+    callCount: 15,
+    textCount: 8,
+  },
+  {
+    phoneNumber: '+0987654321',
+    label: 'Sarah\'s Android',
+    isActive: true,
+    lastSeen: format(new Date(Date.now() - 1000 * 60 * 60 * 2), "yyyy-MM-dd'T'HH:mm:ss"),
+    callCount: 7,
+    textCount: 12,
+  },
+];
+
+const demoContacts: PhoneContact[] = [
+  {
+    id: '1',
+    name: 'John Doe',
+    phoneNumber: '+1234567890',
+    email: 'john@example.com',
+    isSaved: true,
+  },
+  {
+    id: '2',
+    name: 'Sarah Smith',
+    phoneNumber: '+0987654321',
+    email: 'sarah@example.com',
+    isSaved: true,
+  },
+];
+
+const demoCalls: CallRecord[] = [
+  {
+    id: '1',
+    phoneNumber: '+1234567890',
+    contactName: 'John Doe',
+    duration: 180,
+    timestamp: format(new Date(Date.now() - 1000 * 60 * 60), "yyyy-MM-dd'T'HH:mm:ss"),
+    type: 'incoming',
+  },
+  {
+    id: '2',
+    phoneNumber: '+0987654321',
+    contactName: 'Sarah Smith',
+    duration: 95,
+    timestamp: format(new Date(Date.now() - 1000 * 60 * 60 * 3), "yyyy-MM-dd'T'HH:mm:ss"),
+    type: 'outgoing',
+  },
+];
+
+const demoLocations: LocationData[] = [
+  {
+    id: '1',
+    phoneNumber: '+1234567890',
+    contactName: 'John Doe',
+    latitude: 40.7128,
+    longitude: -74.0060,
+    accuracy: 10,
+    timestamp: format(new Date(Date.now() - 1000 * 60 * 30), "yyyy-MM-dd'T'HH:mm:ss"),
+    address: 'New York, NY',
+  },
+  {
+    id: '2',
+    phoneNumber: '+0987654321',
+    contactName: 'Sarah Smith',
+    latitude: 34.0522,
+    longitude: -118.2437,
+    accuracy: 15,
+    timestamp: format(new Date(Date.now() - 1000 * 60 * 60 * 2), "yyyy-MM-dd'T'HH:mm:ss"),
+    address: 'Los Angeles, CA',
+  },
+];
+
+const demoActivities: ActivityLog[] = [
+  {
+    id: '1',
+    phoneNumber: '+1234567890',
+    contactName: 'John Doe',
+    activityType: 'call',
+    details: 'Incoming call - 3 minutes',
+    timestamp: format(new Date(Date.now() - 1000 * 60 * 60), "yyyy-MM-dd'T'HH:mm:ss"),
+  },
+  {
+    id: '2',
+    phoneNumber: '+0987654321',
+    contactName: 'Sarah Smith',
+    activityType: 'text',
+    details: 'New text message received',
+    timestamp: format(new Date(Date.now() - 1000 * 60 * 60 * 2), "yyyy-MM-dd'T'HH:mm:ss"),
+  },
+  {
+    id: '3',
+    phoneNumber: '+1234567890',
+    contactName: 'John Doe',
+    activityType: 'location',
+    details: 'Location updated - New York, NY',
+    timestamp: format(new Date(Date.now() - 1000 * 60 * 30), "yyyy-MM-dd'T'HH:mm:ss"),
+  },
+];
+
+const isDemo = () => {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  return !supabaseUrl || supabaseUrl === 'https://placeholder.supabase.co';
+};
+
 export const supabaseApi = {
   // Tracked numbers
   getTrackedNumbers: async (): Promise<TrackedNumber[]> => {
+    if (isDemo()) {
+      return Promise.resolve(demoTrackedNumbers);
+    }
+    
     const user = await getCurrentUser();
     
     const { data, error } = await supabase
@@ -81,6 +201,19 @@ export const supabaseApi = {
   },
   
   addTrackedNumber: async (phoneNumber: string, label: string): Promise<TrackedNumber> => {
+    if (isDemo()) {
+      const newNumber: TrackedNumber = {
+        phoneNumber,
+        label,
+        isActive: true,
+        lastSeen: format(new Date(), "yyyy-MM-dd'T'HH:mm:ss"),
+        callCount: 0,
+        textCount: 0,
+      };
+      demoTrackedNumbers.unshift(newNumber);
+      return Promise.resolve(newNumber);
+    }
+    
     const user = await getCurrentUser();
     
     const { data, error } = await supabase
@@ -111,6 +244,10 @@ export const supabaseApi = {
   
   // Contacts
   getContacts: async (): Promise<PhoneContact[]> => {
+    if (isDemo()) {
+      return Promise.resolve(demoContacts);
+    }
+    
     const user = await getCurrentUser();
     
     const { data, error } = await supabase
@@ -133,6 +270,15 @@ export const supabaseApi = {
   },
   
   addContact: async (contact: Omit<PhoneContact, 'id'>): Promise<PhoneContact> => {
+    if (isDemo()) {
+      const newContact: PhoneContact = {
+        ...contact,
+        id: Date.now().toString(),
+      };
+      demoContacts.push(newContact);
+      return Promise.resolve(newContact);
+    }
+    
     const user = await getCurrentUser();
     
     const { data, error } = await supabase
@@ -164,6 +310,10 @@ export const supabaseApi = {
   
   // Call records
   getCalls: async (): Promise<CallRecord[]> => {
+    if (isDemo()) {
+      return Promise.resolve(demoCalls);
+    }
+    
     const user = await getCurrentUser();
     
     const { data, error } = await supabase
@@ -185,6 +335,10 @@ export const supabaseApi = {
   },
   
   getCallsByNumber: async (phoneNumber: string): Promise<CallRecord[]> => {
+    if (isDemo()) {
+      return Promise.resolve(demoCalls.filter(call => call.phoneNumber === phoneNumber));
+    }
+    
     const user = await getCurrentUser();
     
     const { data, error } = await supabase
@@ -208,6 +362,10 @@ export const supabaseApi = {
   
   // Location data
   getLocations: async (): Promise<LocationData[]> => {
+    if (isDemo()) {
+      return Promise.resolve(demoLocations);
+    }
+    
     const user = await getCurrentUser();
     
     const { data, error } = await supabase
@@ -231,6 +389,10 @@ export const supabaseApi = {
   },
   
   getLocationsByNumber: async (phoneNumber: string): Promise<LocationData[]> => {
+    if (isDemo()) {
+      return Promise.resolve(demoLocations.filter(loc => loc.phoneNumber === phoneNumber));
+    }
+    
     const user = await getCurrentUser();
     
     const { data, error } = await supabase
@@ -261,6 +423,20 @@ export const supabaseApi = {
     accuracy: number, 
     locationName?: string
   ): Promise<LocationData> => {
+    if (isDemo()) {
+      const newLocation: LocationData = {
+        id: Date.now().toString(),
+        phoneNumber,
+        latitude,
+        longitude,
+        accuracy,
+        timestamp: format(new Date(), "yyyy-MM-dd'T'HH:mm:ss"),
+        address: locationName || "Current Location",
+      };
+      demoLocations.unshift(newLocation);
+      return Promise.resolve(newLocation);
+    }
+    
     const user = await getCurrentUser();
     
     const { data, error } = await supabase
@@ -300,6 +476,10 @@ export const supabaseApi = {
   
   // Activity logs
   getActivities: async (): Promise<ActivityLog[]> => {
+    if (isDemo()) {
+      return Promise.resolve(demoActivities);
+    }
+    
     const user = await getCurrentUser();
     
     const { data, error } = await supabase
@@ -321,6 +501,10 @@ export const supabaseApi = {
   },
   
   getActivitiesByNumber: async (phoneNumber: string): Promise<ActivityLog[]> => {
+    if (isDemo()) {
+      return Promise.resolve(demoActivities.filter(activity => activity.phoneNumber === phoneNumber));
+    }
+    
     const user = await getCurrentUser();
     
     const { data, error } = await supabase
@@ -344,6 +528,11 @@ export const supabaseApi = {
   
   // Real-time subscriptions
   subscribeToLocationUpdates: (phoneNumber: string, callback: (payload: any) => void) => {
+    if (isDemo()) {
+      // Return a mock subscription for demo mode
+      return { unsubscribe: () => {} };
+    }
+    
     return supabase
       .channel('location-changes')
       .on(
@@ -360,6 +549,11 @@ export const supabaseApi = {
   },
   
   subscribeToCallUpdates: (phoneNumber: string, callback: (payload: any) => void) => {
+    if (isDemo()) {
+      // Return a mock subscription for demo mode
+      return { unsubscribe: () => {} };
+    }
+    
     return supabase
       .channel('call-changes')
       .on(
