@@ -10,7 +10,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { LocationMap } from '@/components/dashboard/LocationMap';
 import { TrackedNumberCard } from '@/components/dashboard/TrackedNumberCard';
 import { AddPhoneDialog } from '@/components/dashboard/AddPhoneDialog';
-import { MapPin, Clock, Ruler, Search } from 'lucide-react';
+import { MapPin, Clock, Ruler, Search, Target, Crosshair } from 'lucide-react';
 import { detectCountry } from '@/utils/phoneUtils';
 import { format } from 'date-fns';
 import { useGeolocation } from '@/hooks/useGeolocation';
@@ -20,7 +20,13 @@ const LocationTracking = () => {
   const { toast } = useToast();
   const [selectedPhoneNumber, setSelectedPhoneNumber] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const geolocation = useGeolocation();
+  
+  // Enhanced geolocation with high accuracy settings
+  const geolocation = useGeolocation({
+    enableHighAccuracy: true,
+    timeout: 20000,
+    maximumAge: 0 // Always get fresh location for tracking
+  });
   
   // Fetch tracked numbers
   const { 
@@ -65,7 +71,7 @@ const LocationTracking = () => {
     setSelectedPhoneNumber(phoneNumber);
     toast({
       title: "Phone Selected",
-      description: `Showing location data for ${phoneNumber}`,
+      description: `Showing high-accuracy location data for ${phoneNumber}`,
     });
   };
   
@@ -74,7 +80,7 @@ const LocationTracking = () => {
     setSelectedPhoneNumber(phoneNumber);
     toast({
       title: "Success",
-      description: "Phone number added and ready for tracking",
+      description: "Phone number added and ready for high-accuracy tracking",
     });
   };
   
@@ -99,19 +105,32 @@ const LocationTracking = () => {
     
     if (geolocation.isLoading || !geolocation.latitude || !geolocation.longitude) {
       toast({
-        title: "Getting location",
-        description: "Please wait while we get your current location",
+        title: "Getting high-accuracy location",
+        description: "Please wait while we get your precise location",
       });
       return;
     }
     
     try {
+      console.log('Adding high-accuracy location:', {
+        phoneNumber: selectedPhoneNumber,
+        coordinates: `${geolocation.latitude}, ${geolocation.longitude}`,
+        accuracy: `±${geolocation.accuracy}m`,
+        locationName: geolocation.locationName
+      });
+      
       const newLocation = await api.addLocation(
         selectedPhoneNumber,
         geolocation.latitude,
         geolocation.longitude,
         geolocation.accuracy || 10,
-        geolocation.locationName || "Unknown Location"
+        geolocation.locationName || "Unknown Location",
+        {
+          heading: geolocation.heading,
+          speed: geolocation.speed,
+          altitude: geolocation.altitude,
+          altitudeAccuracy: geolocation.altitudeAccuracy
+        }
       );
       
       refetchLocations();
@@ -120,8 +139,8 @@ const LocationTracking = () => {
       const countryName = country ? `${country.country} (${country.flag})` : "Unknown";
       
       toast({
-        title: "Location Added",
-        description: `Current location added for ${selectedPhoneNumber} in ${countryName}`,
+        title: "High-Accuracy Location Added",
+        description: `Precise location (±${geolocation.accuracy?.toFixed(1)}m) added for ${selectedPhoneNumber} in ${countryName}`,
       });
     } catch (error) {
       toast({
@@ -149,7 +168,7 @@ const LocationTracking = () => {
   return (
     <AppLayout>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Location Tracking</h1>
+        <h1 className="text-3xl font-bold">High-Accuracy Location Tracking</h1>
         <AddPhoneDialog onSuccess={handleAddPhoneSuccess} />
       </div>
       
@@ -207,13 +226,13 @@ const LocationTracking = () => {
             </div>
           )}
           
-          {/* Current Location Card */}
+          {/* Enhanced Current Location Card */}
           {selectedPhoneNumber && currentLocation && (
             <Card className="mt-6 bg-muted/50">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <MapPin className="h-4 w-4" />
-                  Current Location
+                  <Target className="h-4 w-4" />
+                  High-Accuracy Location
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
@@ -229,19 +248,19 @@ const LocationTracking = () => {
                     <p className="font-medium">{currentLocation.address || 'Unknown address'}</p>
                     <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                       <Clock className="h-3 w-3" /> 
-                      {format(new Date(currentLocation.timestamp), 'MMM d, h:mm a')}
+                      {format(new Date(currentLocation.timestamp), 'MMM d, h:mm:ss a')}
                     </p>
                     <div className="text-xs text-muted-foreground mt-1">
-                      Lat: {currentLocation.latitude.toFixed(6)}, 
-                      Long: {currentLocation.longitude.toFixed(6)}
+                      Coordinates: {currentLocation.latitude.toFixed(8)}, {currentLocation.longitude.toFixed(8)}
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      Accuracy: {currentLocation.accuracy.toFixed(1)}m
+                    <div className="text-xs text-green-600 font-medium">
+                      <Crosshair className="h-3 w-3 inline mr-1" />
+                      Accuracy: ±{currentLocation.accuracy.toFixed(1)} meters
                     </div>
                     
                     {/* Distance from current location */}
                     {geolocation.latitude && geolocation.longitude && (
-                      <div className="text-xs flex items-center gap-1 mt-1 text-green-600 font-medium">
+                      <div className="text-xs flex items-center gap-1 mt-1 text-blue-600 font-medium">
                         <Ruler className="h-3 w-3" />
                         Distance: {formatDistance(calculateDistance(
                           geolocation.latitude,
@@ -257,19 +276,23 @@ const LocationTracking = () => {
             </Card>
           )}
           
-          {/* Add Current Location Button */}
+          {/* Enhanced Add Current Location Button */}
           <Button 
             onClick={handleAddCurrentLocation} 
             className="w-full mt-3 gap-2"
             disabled={!selectedPhoneNumber || geolocation.isLoading}
           >
-            <MapPin className="h-4 w-4" />
-            {geolocation.isLoading ? 'Getting Location...' : 'Add Current Location'}
+            <Target className="h-4 w-4" />
+            {geolocation.isLoading ? 'Getting Precise Location...' : 'Add High-Accuracy Location'}
           </Button>
-          {geolocation.locationName && !geolocation.isLoading && (
-            <p className="text-sm text-center mt-1 text-muted-foreground">
-              Current location: {geolocation.locationName}
-            </p>
+          {geolocation.locationName && !geolocation.isLoading && geolocation.accuracy && (
+            <div className="text-sm text-center mt-1 space-y-1">
+              <p className="text-muted-foreground">📍 {geolocation.locationName}</p>
+              <p className="text-green-600 font-medium">
+                <Crosshair className="h-3 w-3 inline mr-1" />
+                Accuracy: ±{geolocation.accuracy.toFixed(1)}m
+              </p>
+            </div>
           )}
         </div>
         
@@ -363,8 +386,8 @@ const LocationTracking = () => {
                         className="mt-3 gap-2"
                         disabled={geolocation.isLoading}
                       >
-                        <MapPin className="h-4 w-4" />
-                        Add Current Location
+                        <Target className="h-4 w-4" />
+                        Add High-Accuracy Location
                       </Button>
                     )}
                   </div>

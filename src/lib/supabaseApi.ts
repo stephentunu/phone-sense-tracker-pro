@@ -158,14 +158,6 @@ const demoActivities: ActivityLog[] = [
     details: 'New text message received',
     timestamp: format(new Date(Date.now() - 1000 * 60 * 60 * 2), "yyyy-MM-dd'T'HH:mm:ss"),
   },
-  {
-    id: '3',
-    phoneNumber: '+1234567890',
-    contactName: 'John Doe',
-    activityType: 'location',
-    details: 'Location updated - New York, NY',
-    timestamp: format(new Date(Date.now() - 1000 * 60 * 30), "yyyy-MM-dd'T'HH:mm:ss"),
-  },
 ];
 
 const isDemo = () => {
@@ -360,7 +352,7 @@ export const supabaseApi = {
     }));
   },
   
-  // Location data
+  // Location data with enhanced accuracy
   getLocations: async (): Promise<LocationData[]> => {
     if (isDemo()) {
       return Promise.resolve(demoLocations);
@@ -421,7 +413,13 @@ export const supabaseApi = {
     latitude: number, 
     longitude: number, 
     accuracy: number, 
-    locationName?: string
+    locationName?: string,
+    additionalData?: {
+      heading?: number | null;
+      speed?: number | null;
+      altitude?: number | null;
+      altitudeAccuracy?: number | null;
+    }
   ): Promise<LocationData> => {
     if (isDemo()) {
       const newLocation: LocationData = {
@@ -434,33 +432,61 @@ export const supabaseApi = {
         address: locationName || "Current Location",
       };
       demoLocations.unshift(newLocation);
+      
+      // Log high-accuracy demo data
+      console.log('Added high-accuracy demo location:', {
+        phoneNumber,
+        latitude: latitude.toFixed(8),
+        longitude: longitude.toFixed(8),
+        accuracy: `±${accuracy.toFixed(1)}m`,
+        locationName,
+        ...additionalData
+      });
+      
       return Promise.resolve(newLocation);
     }
     
     const user = await getCurrentUser();
     
+    // Create enhanced location record with high precision
+    const locationRecord = {
+      user_id: user.id,
+      phone_number: phoneNumber,
+      latitude: parseFloat(latitude.toFixed(8)), // 8 decimal places for ~1cm accuracy
+      longitude: parseFloat(longitude.toFixed(8)),
+      accuracy: parseFloat(accuracy.toFixed(2)),
+      timestamp: format(new Date(), "yyyy-MM-dd'T'HH:mm:ss"),
+      address: locationName || "Current Location",
+    };
+    
+    console.log('Storing high-accuracy location:', {
+      ...locationRecord,
+      additionalData
+    });
+    
     const { data, error } = await supabase
       .from('location_data')
-      .insert({
-        user_id: user.id,
-        phone_number: phoneNumber,
-        latitude,
-        longitude,
-        accuracy,
-        timestamp: format(new Date(), "yyyy-MM-dd'T'HH:mm:ss"),
-        address: locationName || "Current Location",
-      })
+      .insert(locationRecord)
       .select()
       .single();
     
     if (error) throw error;
     
-    // Update last_seen for tracked number
+    // Update last_seen for tracked number with high accuracy timestamp
     await supabase
       .from('tracked_numbers')
-      .update({ last_seen: data.timestamp })
+      .update({ 
+        last_seen: data.timestamp,
+        updated_at: format(new Date(), "yyyy-MM-dd'T'HH:mm:ss")
+      })
       .eq('user_id', user.id)
       .eq('phone_number', phoneNumber);
+    
+    // Log successful high-accuracy location storage
+    console.log('Successfully stored accurate location for', phoneNumber, {
+      accuracy: `±${data.accuracy}m`,
+      coordinates: `${data.latitude}, ${data.longitude}`
+    });
     
     return {
       id: data.id,
