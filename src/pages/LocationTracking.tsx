@@ -124,13 +124,7 @@ const LocationTracking = () => {
         geolocation.latitude,
         geolocation.longitude,
         geolocation.accuracy || 10,
-        geolocation.locationName || "Unknown Location",
-        {
-          heading: geolocation.heading,
-          speed: geolocation.speed,
-          altitude: geolocation.altitude,
-          altitudeAccuracy: geolocation.altitudeAccuracy
-        }
+        geolocation.locationName || "Unknown Location"
       );
       
       refetchLocations();
