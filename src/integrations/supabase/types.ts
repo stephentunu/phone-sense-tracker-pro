@@ -9,7 +9,216 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      activity_logs: {
+        Row: {
+          activity_type: string
+          contact_name: string | null
+          created_at: string | null
+          details: string
+          id: string
+          phone_number: string
+          timestamp: string
+          user_id: string | null
+        }
+        Insert: {
+          activity_type: string
+          contact_name?: string | null
+          created_at?: string | null
+          details: string
+          id?: string
+          phone_number: string
+          timestamp: string
+          user_id?: string | null
+        }
+        Update: {
+          activity_type?: string
+          contact_name?: string | null
+          created_at?: string | null
+          details?: string
+          id?: string
+          phone_number?: string
+          timestamp?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      call_records: {
+        Row: {
+          contact_name: string | null
+          created_at: string | null
+          duration: number
+          id: string
+          phone_number: string
+          timestamp: string
+          type: string
+          user_id: string | null
+        }
+        Insert: {
+          contact_name?: string | null
+          created_at?: string | null
+          duration?: number
+          id?: string
+          phone_number: string
+          timestamp: string
+          type: string
+          user_id?: string | null
+        }
+        Update: {
+          contact_name?: string | null
+          created_at?: string | null
+          duration?: number
+          id?: string
+          phone_number?: string
+          timestamp?: string
+          type?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      contacts: {
+        Row: {
+          address: string | null
+          created_at: string | null
+          email: string | null
+          id: string
+          is_saved: boolean | null
+          name: string
+          notes: string | null
+          phone_number: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          is_saved?: boolean | null
+          name: string
+          notes?: string | null
+          phone_number: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          address?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          is_saved?: boolean | null
+          name?: string
+          notes?: string | null
+          phone_number?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      location_data: {
+        Row: {
+          accuracy: number
+          address: string | null
+          contact_name: string | null
+          created_at: string | null
+          id: string
+          latitude: number
+          longitude: number
+          phone_number: string
+          timestamp: string
+          user_id: string | null
+        }
+        Insert: {
+          accuracy: number
+          address?: string | null
+          contact_name?: string | null
+          created_at?: string | null
+          id?: string
+          latitude: number
+          longitude: number
+          phone_number: string
+          timestamp: string
+          user_id?: string | null
+        }
+        Update: {
+          accuracy?: number
+          address?: string | null
+          contact_name?: string | null
+          created_at?: string | null
+          id?: string
+          latitude?: number
+          longitude?: number
+          phone_number?: string
+          timestamp?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          email: string | null
+          full_name: string | null
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id: string
+          updated_at?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      tracked_numbers: {
+        Row: {
+          call_count: number | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          label: string
+          last_seen: string | null
+          phone_number: string
+          text_count: number | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          call_count?: number | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          label: string
+          last_seen?: string | null
+          phone_number: string
+          text_count?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          call_count?: number | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          label?: string
+          last_seen?: string | null
+          phone_number?: string
+          text_count?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
