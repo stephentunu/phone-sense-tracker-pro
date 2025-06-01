@@ -180,7 +180,7 @@ export const supabaseApi = {
       contactName: item.contact_name,
       duration: item.duration,
       timestamp: item.timestamp,
-      type: item.type,
+      type: item.type as 'incoming' | 'outgoing' | 'missed',
     }));
   },
   
@@ -202,7 +202,7 @@ export const supabaseApi = {
       contactName: item.contact_name,
       duration: item.duration,
       timestamp: item.timestamp,
-      type: item.type,
+      type: item.type as 'incoming' | 'outgoing' | 'missed',
     }));
   },
   
@@ -337,7 +337,7 @@ export const supabaseApi = {
       id: item.id,
       phoneNumber: item.phone_number,
       contactName: item.contact_name,
-      activityType: item.activity_type,
+      activityType: item.activity_type as 'call' | 'text' | 'location' | 'app' | 'web',
       details: item.details,
       timestamp: item.timestamp,
     }));
@@ -359,7 +359,7 @@ export const supabaseApi = {
       id: item.id,
       phoneNumber: item.phone_number,
       contactName: item.contact_name,
-      activityType: item.activity_type,
+      activityType: item.activity_type as 'call' | 'text' | 'location' | 'app' | 'web',
       details: item.details,
       timestamp: item.timestamp,
     }));
