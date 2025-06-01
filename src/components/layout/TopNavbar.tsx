@@ -1,18 +1,32 @@
 
 import React from 'react';
-import { Bell, Search } from 'lucide-react';
+import { Bell, Search, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { UserMenu } from './UserMenu';
 import { useAuth } from '@/contexts/AuthContext';
 
-export const TopNavbar = () => {
+interface TopNavbarProps {
+  onMenuClick?: () => void;
+}
+
+export const TopNavbar = ({ onMenuClick }: TopNavbarProps) => {
   const { user } = useAuth();
 
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
+          {onMenuClick && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onMenuClick}
+              className="md:hidden"
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+          )}
           <h1 className="text-2xl font-bold text-gray-900">Phone Tracker</h1>
         </div>
         
