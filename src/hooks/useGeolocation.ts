@@ -40,75 +40,11 @@ export function useGeolocation(options?: PositionOptions) {
       return;
     }
 
-    const successHandler = async (position: GeolocationPosition) => {
-      console.log('High-accuracy geolocation success:', position.coords);
+    const successHandler = (position: GeolocationPosition) => {
+      console.log('Geolocation success:', position.coords);
       
-      // Get location name using multiple reverse geocoding services for better accuracy
-      let locationName = null;
-      try {
-        // Primary service - OpenStreetMap Nominatim (more detailed for global locations)
-        const nominatimResponse = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.coords.latitude}&lon=${position.coords.longitude}&zoom=18&addressdetails=1&extratags=1`,
-          {
-            headers: {
-              'User-Agent': 'PhoneTracker/1.0'
-            }
-          }
-        );
-        
-        if (nominatimResponse.ok) {
-          const data = await nominatimResponse.json();
-          if (data && data.display_name) {
-            const address = data.address;
-            
-            // Build more accurate location name with house number, street, area
-            const parts = [];
-            
-            // Add house number and street for precise location
-            if (address.house_number && address.road) {
-              parts.push(`${address.house_number} ${address.road}`);
-            } else if (address.road) {
-              parts.push(address.road);
-            }
-            
-            // Add area/suburb for context
-            if (address.suburb || address.neighbourhood) {
-              parts.push(address.suburb || address.neighbourhood);
-            }
-            
-            // Add city/town
-            const city = address.city || address.town || address.village || address.hamlet;
-            if (city) parts.push(city);
-            
-            // Add state/county and country
-            const state = address.state || address.county;
-            if (state) parts.push(state);
-            if (address.country) parts.push(address.country);
-            
-            locationName = parts.join(', ');
-            console.log('Accurate location determined:', locationName);
-          }
-        }
-        
-        // Fallback to OpenCage for additional accuracy if primary fails
-        if (!locationName) {
-          try {
-            const opencageResponse = await fetch(
-              `https://api.opencagedata.com/geocode/v1/json?q=${position.coords.latitude}+${position.coords.longitude}&key=6d0e711d72d74daeb2b0bfd2a5cdfdba&language=en&pretty=1`
-            );
-            const opencageData = await opencageResponse.json();
-            if (opencageData.results && opencageData.results.length > 0) {
-              locationName = opencageData.results[0].formatted;
-              console.log('Fallback location determined:', locationName);
-            }
-          } catch (fallbackError) {
-            console.error('Fallback geocoding failed:', fallbackError);
-          }
-        }
-        
-      } catch (error) {
-        console.error('Error fetching accurate location name:', error);
-      }
+      // Simple location name based on coordinates
+      const locationName = `Location ${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`;
 
       setState({
         latitude: position.coords.latitude,
@@ -126,7 +62,7 @@ export function useGeolocation(options?: PositionOptions) {
     };
 
     const errorHandler = (error: GeolocationPositionError) => {
-      console.error('High-accuracy geolocation error:', error);
+      console.error('Geolocation error:', error);
       let errorMessage = 'Location access denied';
       
       switch (error.code) {
@@ -150,31 +86,31 @@ export function useGeolocation(options?: PositionOptions) {
       }));
     };
 
-    // Ultra-high accuracy options for precise tracking
-    const ultraHighAccuracyOptions: PositionOptions = {
+    // High accuracy options for real-time tracking
+    const geoOptions: PositionOptions = {
       enableHighAccuracy: true,
-      timeout: 30000, // Extended timeout for maximum accuracy
-      maximumAge: 0, // Always get completely fresh location
+      timeout: 10000,
+      maximumAge: 5000,
       ...options
     };
 
-    // Get initial high-accuracy position
+    // Get initial position
     setState(prev => ({ ...prev, isLoading: true }));
     
     navigator.geolocation.getCurrentPosition(
       successHandler,
       errorHandler,
-      ultraHighAccuracyOptions
+      geoOptions
     );
 
-    // Set up continuous ultra-high accuracy tracking for real-time updates
+    // Set up continuous tracking for real-time updates
     const watchId = navigator.geolocation.watchPosition(
       successHandler,
       errorHandler,
       {
         enableHighAccuracy: true,
-        timeout: 25000, // Extended timeout for continuous accuracy
-        maximumAge: 2000, // Update every 2 seconds for real-time tracking
+        timeout: 10000,
+        maximumAge: 5000,
         ...options
       }
     );
@@ -182,7 +118,7 @@ export function useGeolocation(options?: PositionOptions) {
     return () => {
       navigator.geolocation.clearWatch(watchId);
     };
-  }, [options]);
+  }, []); // Empty dependency array to prevent infinite loops
 
   return state;
 }
