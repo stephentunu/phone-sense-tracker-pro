@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PlusCircle, MapPin } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-import { api } from '@/lib/api';
+import { supabaseApi } from '@/lib/supabaseApi';
 import { detectCountry } from '@/utils/phoneUtils';
 
 interface AddPhoneDialogProps {
@@ -51,7 +51,7 @@ export const AddPhoneDialog = ({ onSuccess }: AddPhoneDialogProps) => {
     setIsSubmitting(true);
     
     try {
-      const result = await api.addTrackedNumber(phoneNumber, label || 'Unknown');
+      const result = await supabaseApi.addTrackedNumber(phoneNumber, label || 'Unknown');
       
       toast({
         title: "Success",

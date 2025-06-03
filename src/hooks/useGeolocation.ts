@@ -150,11 +150,11 @@ export function useGeolocation(options?: PositionOptions) {
       }));
     };
 
-    // Enhanced geolocation options for maximum accuracy
-    const highAccuracyOptions: PositionOptions = {
+    // Ultra-high accuracy options for precise tracking
+    const ultraHighAccuracyOptions: PositionOptions = {
       enableHighAccuracy: true,
-      timeout: 20000, // Increased timeout for better accuracy
-      maximumAge: 0, // Always get fresh location
+      timeout: 30000, // Extended timeout for maximum accuracy
+      maximumAge: 0, // Always get completely fresh location
       ...options
     };
 
@@ -164,17 +164,17 @@ export function useGeolocation(options?: PositionOptions) {
     navigator.geolocation.getCurrentPosition(
       successHandler,
       errorHandler,
-      highAccuracyOptions
+      ultraHighAccuracyOptions
     );
 
-    // Set up continuous high-accuracy tracking for real-time updates
+    // Set up continuous ultra-high accuracy tracking for real-time updates
     const watchId = navigator.geolocation.watchPosition(
       successHandler,
       errorHandler,
       {
         enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 5000, // Update every 5 seconds max
+        timeout: 25000, // Extended timeout for continuous accuracy
+        maximumAge: 2000, // Update every 2 seconds for real-time tracking
         ...options
       }
     );

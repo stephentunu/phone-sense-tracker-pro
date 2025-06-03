@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { api, LocationData, TrackedNumber } from '@/lib/api';
+import { supabaseApi, LocationData, TrackedNumber } from '@/lib/supabaseApi';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -35,7 +35,7 @@ const LocationTracking = () => {
     refetch: refetchTrackedNumbers,
   } = useQuery({
     queryKey: ['trackedNumbers'],
-    queryFn: api.getTrackedNumbers,
+    queryFn: supabaseApi.getTrackedNumbers,
   });
   
   // Filter tracked numbers based on search query
@@ -52,8 +52,8 @@ const LocationTracking = () => {
   } = useQuery({
     queryKey: ['locations', selectedPhoneNumber],
     queryFn: () => selectedPhoneNumber 
-      ? api.getLocationsByNumber(selectedPhoneNumber)
-      : api.getLocations(),
+      ? supabaseApi.getLocationsByNumber(selectedPhoneNumber)
+      : supabaseApi.getLocations(),
     enabled: !!selectedPhoneNumber || trackedNumbers?.length === 0
   });
   
@@ -119,12 +119,18 @@ const LocationTracking = () => {
         locationName: geolocation.locationName
       });
       
-      const newLocation = await api.addLocation(
+      const newLocation = await supabaseApi.addLocation(
         selectedPhoneNumber,
         geolocation.latitude,
         geolocation.longitude,
         geolocation.accuracy || 10,
-        geolocation.locationName || "Unknown Location"
+        geolocation.locationName || "Unknown Location",
+        {
+          heading: geolocation.heading,
+          speed: geolocation.speed,
+          altitude: geolocation.altitude,
+          altitudeAccuracy: geolocation.altitudeAccuracy
+        }
       );
       
       refetchLocations();

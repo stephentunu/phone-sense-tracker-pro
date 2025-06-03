@@ -114,6 +114,87 @@ export type Database = {
         }
         Relationships: []
       }
+      conversations: {
+        Row: {
+          created_at: string
+          id: string
+          last_message_at: string | null
+          participant_1: string
+          participant_2: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_message_at?: string | null
+          participant_1: string
+          participant_2: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_message_at?: string | null
+          participant_1?: string
+          participant_2?: string
+        }
+        Relationships: []
+      }
+      loans: {
+        Row: {
+          approval_date: string | null
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          id: string
+          interest_rate: number
+          loan_number: string
+          monthly_payment: number
+          next_payment_date: string
+          principal_amount: number
+          rejection_reason: string | null
+          remaining_balance: number
+          status: string
+          term_months: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          approval_date?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          interest_rate: number
+          loan_number: string
+          monthly_payment: number
+          next_payment_date: string
+          principal_amount: number
+          rejection_reason?: string | null
+          remaining_balance: number
+          status?: string
+          term_months: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          approval_date?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          interest_rate?: number
+          loan_number?: string
+          monthly_payment?: number
+          next_payment_date?: string
+          principal_amount?: number
+          rejection_reason?: string | null
+          remaining_balance?: number
+          status?: string
+          term_months?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       location_data: {
         Row: {
           accuracy: number
@@ -153,6 +234,33 @@ export type Database = {
         }
         Relationships: []
       }
+      messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          read_at: string | null
+          receiver_id: string
+          sender_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          receiver_id: string
+          sender_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          receiver_id?: string
+          sender_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -177,6 +285,42 @@ export type Database = {
           full_name?: string | null
           id?: string
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      savings_accounts: {
+        Row: {
+          account_number: string
+          balance: number
+          created_at: string
+          id: string
+          interest_earned: number
+          interest_rate: number
+          is_active: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_number: string
+          balance?: number
+          created_at?: string
+          id?: string
+          interest_earned?: number
+          interest_rate?: number
+          is_active?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_number?: string
+          balance?: number
+          created_at?: string
+          id?: string
+          interest_earned?: number
+          interest_rate?: number
+          is_active?: boolean
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -219,12 +363,114 @@ export type Database = {
         }
         Relationships: []
       }
+      transactions: {
+        Row: {
+          account_id: string | null
+          account_type: string
+          amount: number
+          balance_after: number
+          created_at: string
+          description: string | null
+          id: string
+          reference_number: string
+          transaction_type: string
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          account_type: string
+          amount: number
+          balance_after: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          reference_number: string
+          transaction_type: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          account_type?: string
+          amount?: number
+          balance_after?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          reference_number?: string
+          transaction_type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_profiles: {
+        Row: {
+          address: string | null
+          created_at: string
+          credit_score: number
+          email: string
+          full_name: string
+          id: string
+          is_verified: boolean
+          phone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          credit_score?: number
+          email: string
+          full_name: string
+          id?: string
+          is_verified?: boolean
+          phone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          credit_score?: number
+          email?: string
+          full_name?: string
+          id?: string
+          is_verified?: boolean
+          phone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_admin: {
+        Args: { user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
