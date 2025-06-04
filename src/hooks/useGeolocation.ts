@@ -40,26 +40,55 @@ export function useGeolocation(options?: PositionOptions) {
       return;
     }
 
-    const successHandler = (position: GeolocationPosition) => {
-      console.log('Geolocation success:', position.coords);
-      
-      // Simple location name based on coordinates
-      const locationName = `Location ${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`;
+  const successHandler = (position: GeolocationPosition) => {
+    const coords = position.coords;
+    
+    // Log actual coordinate data for debugging
+    console.log('Geolocation success - Raw coordinates:', {
+      latitude: coords.latitude,
+      longitude: coords.longitude,
+      accuracy: coords.accuracy,
+      heading: coords.heading,
+      speed: coords.speed,
+      altitude: coords.altitude,
+      timestamp: position.timestamp
+    });
+    
+    // Validate coordinates are real numbers
+    if (!coords.latitude || !coords.longitude || 
+        typeof coords.latitude !== 'number' || 
+        typeof coords.longitude !== 'number') {
+      console.error('Invalid coordinates received:', coords);
+      setState(prev => ({ 
+        ...prev, 
+        error: 'Invalid location coordinates received',
+        isLoading: false
+      }));
+      return;
+    }
+    
+    // Check if accuracy is reasonable for phone tracking (should be under 100m for good tracking)
+    if (coords.accuracy > 100) {
+      console.warn(`Low accuracy warning: ±${coords.accuracy.toFixed(1)}m - continuing but may be inaccurate`);
+    }
+    
+    // Generate more descriptive location name
+    const locationName = `Location ${coords.latitude.toFixed(6)}, ${coords.longitude.toFixed(6)}`;
 
-      setState({
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-        accuracy: position.coords.accuracy,
-        error: null,
-        isLoading: false,
-        timestamp: position.timestamp,
-        locationName: locationName,
-        heading: position.coords.heading,
-        speed: position.coords.speed,
-        altitude: position.coords.altitude,
-        altitudeAccuracy: position.coords.altitudeAccuracy,
-      });
-    };
+    setState({
+      latitude: coords.latitude,
+      longitude: coords.longitude,
+      accuracy: coords.accuracy,
+      error: null,
+      isLoading: false,
+      timestamp: position.timestamp,
+      locationName: locationName,
+      heading: coords.heading,
+      speed: coords.speed,
+      altitude: coords.altitude,
+      altitudeAccuracy: coords.altitudeAccuracy,
+    });
+  };
 
     const errorHandler = (error: GeolocationPositionError) => {
       console.error('Geolocation error:', error);
@@ -86,11 +115,11 @@ export function useGeolocation(options?: PositionOptions) {
       }));
     };
 
-    // High accuracy options for real-time tracking
+    // Optimized options for real-world phone tracking accuracy
     const geoOptions: PositionOptions = {
-      enableHighAccuracy: true,
-      timeout: 10000,
-      maximumAge: 5000,
+      enableHighAccuracy: true,      // Use GPS when available
+      timeout: 15000,                // Longer timeout for better accuracy
+      maximumAge: 0,                 // Always get fresh location
       ...options
     };
 
@@ -103,14 +132,14 @@ export function useGeolocation(options?: PositionOptions) {
       geoOptions
     );
 
-    // Set up continuous tracking for real-time updates
+    // Set up continuous tracking optimized for phone tracking
     const watchId = navigator.geolocation.watchPosition(
       successHandler,
       errorHandler,
       {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 5000,
+        enableHighAccuracy: true,      // Use GPS when available  
+        timeout: 15000,                // Allow time for GPS lock
+        maximumAge: 0,                 // Always get fresh location for tracking
         ...options
       }
     );
