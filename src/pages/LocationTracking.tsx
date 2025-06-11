@@ -15,6 +15,7 @@ import { detectCountry } from '@/utils/phoneUtils';
 import { format } from 'date-fns';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { calculateDistance, formatDistance } from '@/utils/geoUtils';
+import { PhoneTrackingService } from '@/services/phoneTrackingService';
 
 const LocationTracking = () => {
   const { toast } = useToast();
@@ -84,7 +85,7 @@ const LocationTracking = () => {
     });
   };
   
-  const handleAddCurrentLocation = async () => {
+  const handleTrackPhone = async () => {
     if (!selectedPhoneNumber) {
       toast({
         title: "Error",
@@ -94,42 +95,42 @@ const LocationTracking = () => {
       return;
     }
     
-    if (geolocation.error) {
-      toast({
-        title: "Geolocation Error",
-        description: geolocation.error,
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (geolocation.isLoading || !geolocation.latitude || !geolocation.longitude) {
-      toast({
-        title: "Getting high-accuracy location",
-        description: "Please wait while we get your precise location",
-      });
-      return;
-    }
-    
     try {
-      console.log('Adding high-accuracy location:', {
-        phoneNumber: selectedPhoneNumber,
-        coordinates: `${geolocation.latitude}, ${geolocation.longitude}`,
-        accuracy: `±${geolocation.accuracy}m`,
-        locationName: geolocation.locationName
+      toast({
+        title: "Tracking Phone",
+        description: "Getting real-time location from tracking service...",
       });
       
+      // Get actual phone location from tracking service
+      const phoneLocation = await PhoneTrackingService.getPhoneLocation(selectedPhoneNumber);
+      
+      if (!phoneLocation) {
+        toast({
+          title: "Error",
+          description: "Could not locate the tracked phone",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      console.log('Phone tracking result:', {
+        phoneNumber: selectedPhoneNumber,
+        coordinates: `${phoneLocation.latitude}, ${phoneLocation.longitude}`,
+        accuracy: `±${phoneLocation.accuracy}m`,
+        address: phoneLocation.address
+      });
+      
+      // Save the tracked phone's actual location to database
       const newLocation = await supabaseApi.addLocation(
         selectedPhoneNumber,
-        geolocation.latitude,
-        geolocation.longitude,
-        geolocation.accuracy || 10,
-        geolocation.locationName || "Unknown Location",
+        phoneLocation.latitude,
+        phoneLocation.longitude,
+        phoneLocation.accuracy,
+        phoneLocation.address,
         {
-          heading: geolocation.heading,
-          speed: geolocation.speed,
-          altitude: geolocation.altitude,
-          altitudeAccuracy: geolocation.altitudeAccuracy
+          heading: phoneLocation.heading,
+          speed: phoneLocation.speed,
+          altitude: phoneLocation.altitude
         }
       );
       
@@ -139,13 +140,14 @@ const LocationTracking = () => {
       const countryName = country ? `${country.country} (${country.flag})` : "Unknown";
       
       toast({
-        title: "High-Accuracy Location Added",
-        description: `Precise location (±${geolocation.accuracy?.toFixed(1)}m) added for ${selectedPhoneNumber} in ${countryName}`,
+        title: "Phone Located Successfully",
+        description: `Found ${phoneLocation.contactName} at ${phoneLocation.address} with ±${phoneLocation.accuracy.toFixed(1)}m accuracy`,
       });
     } catch (error) {
+      console.error('Phone tracking error:', error);
       toast({
-        title: "Error",
-        description: "Failed to add current location",
+        title: "Tracking Failed",
+        description: "Failed to get phone location from tracking service",
         variant: "destructive"
       });
     }
@@ -226,13 +228,39 @@ const LocationTracking = () => {
             </div>
           )}
           
-          {/* Enhanced Current Location Card */}
+           {/* Your Current Location Card */}
+          {geolocation.latitude && geolocation.longitude && (
+            <Card className="mt-6 bg-blue-50 border-blue-200">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-blue-600" />
+                  Your Current Location
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-blue-900">
+                    📍 {geolocation.locationName || 'Getting location...'}
+                  </p>
+                  <div className="text-xs text-blue-700">
+                    Coordinates: {geolocation.latitude.toFixed(6)}, {geolocation.longitude.toFixed(6)}
+                  </div>
+                  <div className="text-xs text-green-600 font-medium">
+                    <Crosshair className="h-3 w-3 inline mr-1" />
+                    Accuracy: ±{geolocation.accuracy?.toFixed(1) || 'N/A'} meters
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+           {/* Tracked Phone Location Card */}
           {selectedPhoneNumber && currentLocation && (
             <Card className="mt-6 bg-muted/50">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base flex items-center gap-2">
                   <Target className="h-4 w-4" />
-                  High-Accuracy Location
+                  Tracked Phone Location
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
@@ -276,14 +304,14 @@ const LocationTracking = () => {
             </Card>
           )}
           
-          {/* Enhanced Add Current Location Button */}
+          {/* Track Phone Button */}
           <Button 
-            onClick={handleAddCurrentLocation} 
+            onClick={handleTrackPhone} 
             className="w-full mt-3 gap-2"
-            disabled={!selectedPhoneNumber || geolocation.isLoading}
+            disabled={!selectedPhoneNumber}
           >
             <Target className="h-4 w-4" />
-            {geolocation.isLoading ? 'Getting Precise Location...' : 'Add High-Accuracy Location'}
+            Track Phone Location
           </Button>
           {geolocation.locationName && !geolocation.isLoading && geolocation.accuracy && (
             <div className="text-sm text-center mt-1 space-y-1">
@@ -382,12 +410,11 @@ const LocationTracking = () => {
                     <p className="text-muted-foreground">No location history available</p>
                     {selectedPhoneNumber && (
                       <Button 
-                        onClick={handleAddCurrentLocation} 
+                        onClick={handleTrackPhone} 
                         className="mt-3 gap-2"
-                        disabled={geolocation.isLoading}
                       >
                         <Target className="h-4 w-4" />
-                        Add High-Accuracy Location
+                        Track Phone Location
                       </Button>
                     )}
                   </div>
