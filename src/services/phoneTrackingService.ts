@@ -382,13 +382,13 @@ export class PhoneTrackingService {
       if (!enhancedAddress || enhancedAddress === 'Unknown location') {
         try {
           const response = await fetch(
-            `https://api.opencagedata.com/geocode/v1/json?q=${location.latitude}+${location.longitude}&key=demo-key&limit=1`
+            `https://nominatim.openstreetmap.org/reverse?lat=${location.latitude}&lon=${location.longitude}&format=json&addressdetails=1`
           );
           
           if (response.ok) {
             const data = await response.json();
-            if (data.results && data.results.length > 0) {
-              enhancedAddress = data.results[0].formatted || location.address;
+            if (data && data.display_name) {
+              enhancedAddress = data.display_name;
             }
           }
         } catch (error) {

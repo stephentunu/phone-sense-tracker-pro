@@ -90,31 +90,30 @@ export function useGeolocation(options?: PositionOptions) {
     // Get actual location name using reverse geocoding (async)
     try {
       const response = await fetch(
-        `https://api.opencagedata.com/geocode/v1/json?q=${coords.latitude}+${coords.longitude}&key=demo-key&limit=1`
+        `https://nominatim.openstreetmap.org/reverse?lat=${coords.latitude}&lon=${coords.longitude}&format=json&addressdetails=1`
       );
       
       if (response.ok) {
         const data = await response.json();
-        if (data.results && data.results.length > 0) {
-          const result = data.results[0];
-          const components = result.components;
+        if (data && data.address) {
+          const address = data.address;
           
           // Build a readable location name
           const parts = [];
-          if (components.building || components.house_number) {
-            parts.push(components.building || components.house_number);
+          if (address.house_number) {
+            parts.push(address.house_number);
           }
-          if (components.road) {
-            parts.push(components.road);
+          if (address.road) {
+            parts.push(address.road);
           }
-          if (components.neighbourhood || components.suburb) {
-            parts.push(components.neighbourhood || components.suburb);
+          if (address.neighbourhood || address.suburb || address.city_district) {
+            parts.push(address.neighbourhood || address.suburb || address.city_district);
           }
-          if (components.city || components.town || components.village) {
-            parts.push(components.city || components.town || components.village);
+          if (address.city || address.town || address.village) {
+            parts.push(address.city || address.town || address.village);
           }
-          if (components.country) {
-            parts.push(components.country);
+          if (address.country) {
+            parts.push(address.country);
           }
           
           if (parts.length > 0) {
