@@ -377,14 +377,39 @@ export class PhoneTrackingService {
         return null;
       }
 
+      // Enhance address with reverse geocoding if needed
+      let enhancedAddress = location.address;
+      if (!enhancedAddress || enhancedAddress === 'Unknown location') {
+        try {
+          const response = await fetch(
+            `https://api.opencagedata.com/geocode/v1/json?q=${location.latitude}+${location.longitude}&key=demo-key&limit=1`
+          );
+          
+          if (response.ok) {
+            const data = await response.json();
+            if (data.results && data.results.length > 0) {
+              enhancedAddress = data.results[0].formatted || location.address;
+            }
+          }
+        } catch (error) {
+          console.log('Reverse geocoding failed for tracked phone:', error);
+        }
+      }
+
+      const enhancedLocation = {
+        ...location,
+        address: enhancedAddress
+      };
+
       console.log(`Successfully retrieved location from ${provider.name}:`, {
-        phoneNumber: location.phoneNumber,
-        coordinates: `${location.latitude}, ${location.longitude}`,
-        accuracy: `±${location.accuracy}m`,
-        timestamp: location.timestamp.toISOString()
+        phoneNumber: enhancedLocation.phoneNumber,
+        coordinates: `${enhancedLocation.latitude}, ${enhancedLocation.longitude}`,
+        accuracy: `±${enhancedLocation.accuracy}m`,
+        address: enhancedLocation.address,
+        timestamp: enhancedLocation.timestamp.toISOString()
       });
 
-      return location;
+      return enhancedLocation;
     } catch (error) {
       console.error(`Error getting location from ${provider.name}:`, error);
       throw error;

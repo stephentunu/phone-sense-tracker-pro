@@ -40,7 +40,7 @@ export function useGeolocation(options?: PositionOptions) {
       return;
     }
 
-  const successHandler = (position: GeolocationPosition) => {
+  const successHandler = async (position: GeolocationPosition) => {
     const coords = position.coords;
     
     // Log actual coordinate data for debugging
@@ -72,9 +72,7 @@ export function useGeolocation(options?: PositionOptions) {
       console.warn(`Low accuracy warning: ±${coords.accuracy.toFixed(1)}m - continuing but may be inaccurate`);
     }
     
-    // Generate more descriptive location name
-    const locationName = `Location ${coords.latitude.toFixed(6)}, ${coords.longitude.toFixed(6)}`;
-
+    // Set initial state with coordinates
     setState({
       latitude: coords.latitude,
       longitude: coords.longitude,
@@ -82,12 +80,55 @@ export function useGeolocation(options?: PositionOptions) {
       error: null,
       isLoading: false,
       timestamp: position.timestamp,
-      locationName: locationName,
+      locationName: `Location ${coords.latitude.toFixed(6)}, ${coords.longitude.toFixed(6)}`,
       heading: coords.heading,
       speed: coords.speed,
       altitude: coords.altitude,
       altitudeAccuracy: coords.altitudeAccuracy,
     });
+    
+    // Get actual location name using reverse geocoding (async)
+    try {
+      const response = await fetch(
+        `https://api.opencagedata.com/geocode/v1/json?q=${coords.latitude}+${coords.longitude}&key=demo-key&limit=1`
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.results && data.results.length > 0) {
+          const result = data.results[0];
+          const components = result.components;
+          
+          // Build a readable location name
+          const parts = [];
+          if (components.building || components.house_number) {
+            parts.push(components.building || components.house_number);
+          }
+          if (components.road) {
+            parts.push(components.road);
+          }
+          if (components.neighbourhood || components.suburb) {
+            parts.push(components.neighbourhood || components.suburb);
+          }
+          if (components.city || components.town || components.village) {
+            parts.push(components.city || components.town || components.village);
+          }
+          if (components.country) {
+            parts.push(components.country);
+          }
+          
+          if (parts.length > 0) {
+            const locationName = parts.slice(0, 3).join(', '); // Take first 3 most relevant parts
+            setState(prev => ({
+              ...prev,
+              locationName: locationName
+            }));
+          }
+        }
+      }
+    } catch (error) {
+      console.log('Reverse geocoding failed, using coordinates:', error);
+    }
   };
 
     const errorHandler = (error: GeolocationPositionError) => {

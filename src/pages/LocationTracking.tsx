@@ -238,16 +238,16 @@ const LocationTracking = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-blue-900">
-                    📍 {geolocation.locationName || 'Getting location...'}
+                <div className="space-y-2">
+                  <p className="text-base font-semibold text-blue-900">
+                    📍 {geolocation.locationName || 'Getting your location...'}
                   </p>
                   <div className="text-xs text-blue-700">
-                    Coordinates: {geolocation.latitude.toFixed(6)}, {geolocation.longitude.toFixed(6)}
+                    {geolocation.latitude?.toFixed(6)}, {geolocation.longitude?.toFixed(6)}
                   </div>
-                  <div className="text-xs text-green-600 font-medium">
+                  <div className="text-xs text-green-600 font-medium bg-green-100 px-2 py-1 rounded">
                     <Crosshair className="h-3 w-3 inline mr-1" />
-                    Accuracy: ±{geolocation.accuracy?.toFixed(1) || 'N/A'} meters
+                    Accuracy: ±{geolocation.accuracy?.toFixed(1) || 'N/A'}m
                   </div>
                 </div>
               </CardContent>
@@ -272,33 +272,35 @@ const LocationTracking = () => {
                     </div>
                   )}
                   
-                  <div className="text-sm">
-                    <p className="font-medium">{currentLocation.address || 'Unknown address'}</p>
-                    <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                      <Clock className="h-3 w-3" /> 
-                      {format(new Date(currentLocation.timestamp), 'MMM d, h:mm:ss a')}
-                    </p>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      Coordinates: {currentLocation.latitude.toFixed(8)}, {currentLocation.longitude.toFixed(8)}
-                    </div>
-                    <div className="text-xs text-green-600 font-medium">
-                      <Crosshair className="h-3 w-3 inline mr-1" />
-                      Accuracy: ±{currentLocation.accuracy.toFixed(1)} meters
-                    </div>
-                    
-                    {/* Distance from current location */}
-                    {geolocation.latitude && geolocation.longitude && (
-                      <div className="text-xs flex items-center gap-1 mt-1 text-blue-600 font-medium">
-                        <Ruler className="h-3 w-3" />
-                        Distance: {formatDistance(calculateDistance(
-                          geolocation.latitude,
-                          geolocation.longitude,
-                          currentLocation.latitude,
-                          currentLocation.longitude
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                   <div className="space-y-2">
+                     <p className="text-base font-semibold text-gray-900">
+                       📍 {currentLocation.address || 'Unknown address'}
+                     </p>
+                     <p className="text-xs text-muted-foreground flex items-center gap-1">
+                       <Clock className="h-3 w-3" /> 
+                       {format(new Date(currentLocation.timestamp), 'MMM d, h:mm:ss a')}
+                     </p>
+                     <div className="text-xs text-muted-foreground">
+                       {currentLocation.latitude.toFixed(6)}, {currentLocation.longitude.toFixed(6)}
+                     </div>
+                     <div className="text-xs text-green-600 font-medium bg-green-100 px-2 py-1 rounded">
+                       <Crosshair className="h-3 w-3 inline mr-1" />
+                       Accuracy: ±{currentLocation.accuracy.toFixed(1)}m
+                     </div>
+                     
+                     {/* Distance from current location */}
+                     {geolocation.latitude && geolocation.longitude && (
+                       <div className="text-xs flex items-center gap-1 text-blue-600 font-medium bg-blue-100 px-2 py-1 rounded">
+                         <Ruler className="h-3 w-3" />
+                         Distance: {formatDistance(calculateDistance(
+                           geolocation.latitude,
+                           geolocation.longitude,
+                           currentLocation.latitude,
+                           currentLocation.longitude
+                         ))}
+                       </div>
+                     )}
+                   </div>
                 </div>
               </CardContent>
             </Card>
